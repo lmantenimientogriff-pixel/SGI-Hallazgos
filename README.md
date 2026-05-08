@@ -1,1 +1,1 @@
-# SGI---Hallazgos
+# SGI-Hallazgos
