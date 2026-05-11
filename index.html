@@ -268,7 +268,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div style="margin-bottom:4px"><span class="logo-badge">GRIFFOULIERE</span><span style="font-size:11px;color:var(--text3)">Sistema de Gestión Integrado</span></div>
       <h1>Tablero de Hallazgos SGI</h1>
       <div class="sub" id="subtitle">Cargando...</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">07</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">08</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
     </div>
     <div class="hactions">
       <button onclick="recargar()"><i class="ti ti-refresh"></i> Actualizar</button>
@@ -496,6 +496,38 @@ function switchTab(id,el){
   document.querySelectorAll('.tcontent').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('tab-'+id).classList.add('active');
+  if(id==='log' && SESSION && SESSION.rol==='admin') cargarLogSheet();
+}
+
+async function cargarLogSheet(){
+  try{
+    const url = API_URL()+'?action=getLog';
+    console.log('Cargando log desde:', url);
+    const res = await fetch(url);
+    const text = await res.text();
+    console.log('Respuesta log raw:', text.substring(0,200));
+    const data = JSON.parse(text);
+    console.log('Log rows:', data.length);
+    if(!Array.isArray(data)) return;
+    // Convertir filas del sheet a formato de entrada de log
+    const fromSheet = data.map(r=>({
+      ts: r['Timestamp']||'',
+      usuario: r['Usuario']||'',
+      nombre: r['Nombre']||'',
+      nHall: r['N° Hallazgo']||'',
+      campo: r['Campo']||'',
+      anterior: r['Valor anterior']||'—',
+      nuevo: r['Valor nuevo']||''
+    }));
+    // Combinar con los cambios de esta sesión (evitar duplicados)
+    const tsSet = new Set(LOG_CAMBIOS.map(e=>e.ts+e.usuario+e.nHall));
+    fromSheet.forEach(e=>{
+      if(!tsSet.has(e.ts+e.usuario+e.nHall)) LOG_CAMBIOS.push(e);
+    });
+    // Ordenar por fecha descendente
+    LOG_CAMBIOS.sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+    renderLog();
+  } catch(err){ console.warn('No se pudo cargar log del Sheet:', err); }
 }
 function pillEstado(e){
   if(!e||e.trim()==='')return'<span style="color:var(--text3);font-size:10px">—</span>';
@@ -507,17 +539,16 @@ function pillEstado(e){
 }
 
 
-function pillVerifEdit(val, serialNumber) {
-  const opts = ['Verifica','No Verifica','Verifica Con Observaciones'];
+function pillVerifEdit(val, rowId) {
   const map = {'Verifica':'p-fin','No Verifica':'p-nc','Verifica Con Observaciones':'p-cur'};
   const cls = map[val] || 'p-obs';
   const label = val || '—';
-  return `<button class="pill ${cls} pill-btn" onclick="openVerifPopup(event,'${serialNumber}')" title="Click para cambiar">${label} ✎</button>`;
+  return `<button class="pill ${cls} pill-btn" onclick="openVerifPopup(event,${rowId})" title="Click para cambiar">${label} ✎</button>`;
 }
 
-function openVerifPopup(e, serialNumber) {
+function openVerifPopup(e, rowId) {
   e.stopPropagation();
-  popupCtx = {serialNumber, campo: 'estVerif'};
+  popupCtx = {rowId, campo: 'estVerif'};
   document.getElementById('popup-title').textContent = '4. Verificación eficacia';
   document.getElementById('popup-opts').innerHTML = `
     <div class="estado-opt" onclick="setEstado('Verifica')"><span class="dot" style="background:#1D9E75"></span>Verifica</div>
@@ -540,14 +571,14 @@ function resetPopupOpts() {
     <div class="estado-opt" onclick="setEstado('PENDIENTE')"><span class="dot" style="background:#E24B4A"></span>Pendiente</div>`;
 }
 
-async function saveField(serialNumber, campo, valor) {
-  // Actualizar localmente en rawData y filtrados
-  const row = rawData.find(r => String(r.serialNumber) === String(serialNumber));
+async function saveField(rowId, campo, valor) {
+  const row = rawData.find(r => r.rowId === rowId);
   const valorAnterior = row ? (row[campo] || '—') : '—';
   if (row) row[campo] = valor;
-  const rowF = filtrados.find(r => String(r.serialNumber) === String(serialNumber));
+  const rowF = filtrados.find(r => r.rowId === rowId);
   if (rowF) rowF[campo] = valor;
-  registrarLog(serialNumber, row?.nHall, campo, valorAnterior, valor);
+  registrarLog(row?.serialNumber, row?.nHall, campo, valorAnterior, valor);
+  const serialNumber = row?.serialNumber;
   try {
     const res = await fetch(API_URL(), {
       method: 'POST',
@@ -561,16 +592,11 @@ async function saveField(serialNumber, campo, valor) {
   }
 }
 
-function pillEstadoEdit(e, campo, serialNumber) {
-  // pill clickeable que abre el popup
-  const map = {
-    'FINALIZADO': 'p-fin',
-    'EN CURSO': 'p-cur',
-    'PENDIENTE': 'p-pen'
-  };
-  const cls = map[e?.trim()?.toUpperCase()] || 'p-obs';
-  const label = e && e.trim() ? e.trim() : '—';
-  return `<button class="pill ${cls} pill-btn" onclick="openEstadoPopup(event,'${serialNumber}','${campo}')" title="Click para cambiar estado">${label} ✎</button>`;
+function pillEstadoEdit(val, campo, rowId) {
+  const map = {'FINALIZADO':'p-fin','EN CURSO':'p-cur','PENDIENTE':'p-pen'};
+  const cls = map[val?.trim()?.toUpperCase()] || 'p-obs';
+  const label = val && val.trim() ? val.trim() : '—';
+  return `<button class="pill ${cls} pill-btn" onclick="openEstadoPopup(event,${rowId},'${campo}')" title="Click para cambiar estado">${label} ✎</button>`;
 }
 
 function pillCierre(e){
@@ -905,11 +931,11 @@ function renderResponsables(data){
         </div>
         <div class="rhall-status">
           <div style="font-size:9px;color:var(--text3);margin-bottom:2px">1. Corrección</div>
-          ${pillEstadoEdit(r.estCorr,'estCorr',r.serialNumber)}
+          ${pillEstadoEdit(r.estCorr,'estCorr',r.rowId)}
           <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">2. Cierre hallazgo</div>
           ${pillCierre(r.estCierre)}
           <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">3. Acción correctiva</div>
-          ${pillEstadoEdit(r.estAcc,'estAcc',r.serialNumber)}
+          ${pillEstadoEdit(r.estAcc,'estAcc',r.rowId)}
           <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">4. Verif. eficacia</div>
           <div style="font-size:10px;color:var(--text2)">${r.estVerif||'—'}</div>
           <div class="rhall-vto" style="margin-top:5px">${vtoHtml}</div>
@@ -983,10 +1009,10 @@ function renderTabla(data){
     const sd=r.desc||'—';
     const ac=r.accionDesc||'—';
     const rn=r.respDir.split(' ').slice(0,2).join(' ');
-    const fImplCorrInput=`<input type="date" class="edit-date" value="${r.fImplCorr?String(r.fImplCorr).split('T')[0]:''}" onchange="saveField('${r.serialNumber}','fImplCorr',this.value)" title="Fecha impl. corrección">`;
-    const fImplAccInput=`<input type="date" class="edit-date" value="${r.fImpl?String(r.fImpl).split('T')[0]:''}" onchange="saveField('${r.serialNumber}','fImpl',this.value)" title="Fecha impl. acción correctiva">`;
+    const fImplCorrInput=`<input type="date" class="edit-date" value="${r.fImplCorr?String(r.fImplCorr).split('T')[0]:''}" onchange="saveField(${r.rowId},'fImplCorr',this.value)" title="Fecha impl. corrección">`;
+    const fImplAccInput=`<input type="date" class="edit-date" value="${r.fImpl?String(r.fImpl).split('T')[0]:''}" onchange="saveField(${r.rowId},'fImpl',this.value)" title="Fecha impl. acción correctiva">`;
     const obsVal=(r.obsVerif||'').replace(/['"]/g,'');
-    const obsVerifInput='<input type="text" class="edit-date" style="width:130px" value="'+obsVal+'" onblur="saveField('+String(r.serialNumber)+',\'obsVerif\',this.value)" placeholder="Observación..." title="Obs. verificación">';
+    const obsVerifInput='<input type="text" class="edit-date" style="width:130px" value="'+obsVal+'" onblur="saveField('+r.rowId+',\'obsVerif\',this.value)" placeholder="Observación..." title="Obs. verificación">';
     return`<tr>
       <td><strong>${id}</strong></td>
       <td style="white-space:nowrap">${fmtDate(r.fechaAud)}</td>
@@ -996,11 +1022,11 @@ function renderTabla(data){
       <td style="font-size:11px;min-width:200px;max-width:300px;white-space:pre-wrap;word-break:break-word;line-height:1.4;color:var(--text2)">${ac}</td>
       <td style="white-space:nowrap">${fmtDate(r.fMaxCorr)}${vencBadge}</td>
       <td>${fImplCorrInput}</td>
-      <td>${pillEstadoEdit(r.estCorr,"estCorr",r.serialNumber)}</td>
+      <td>${pillEstadoEdit(r.estCorr,"estCorr",r.rowId)}</td>
       <td>${pillCierre(r.estCierre)}</td>
       <td>${fImplAccInput}</td>
-      <td>${pillEstadoEdit(r.estAcc,"estAcc",r.serialNumber)}</td>
-      <td>${pillVerifEdit(r.estVerif,r.serialNumber)}</td>
+      <td>${pillEstadoEdit(r.estAcc,"estAcc",r.rowId)}</td>
+      <td>${pillVerifEdit(r.estVerif,r.rowId)}</td>
       <td>${obsVerifInput}</td>
       <td style="text-align:center">${dTxt}</td>
     </tr>`;
@@ -1052,12 +1078,13 @@ function exportarPDF(){
 const API_URL = () => document.getElementById('api-url').value;
 let popupCtx = {serialNumber: null, campo: null, rowIdx: null};
 
-function openEstadoPopup(e, serialNumber, campo, rowIdx) {
+function openEstadoPopup(e, rowId, campo) {
   e.stopPropagation();
   const popup = document.getElementById('estado-popup');
   const label = campo === 'estCorr' ? '1. Corrección' : '3. Acción Correctiva';
   document.getElementById('popup-title').textContent = label;
-  popupCtx = {serialNumber, campo, rowIdx};
+  resetPopupOpts();
+  popupCtx = {rowId, campo};
   // Posicionar popup cerca del click
   const x = Math.min(e.clientX, window.innerWidth - 180);
   const y = Math.min(e.clientY + 8, window.innerHeight - 160);
@@ -1069,17 +1096,17 @@ function openEstadoPopup(e, serialNumber, campo, rowIdx) {
 async function setEstado(nuevoValor) {
   const popup = document.getElementById('estado-popup');
   popup.classList.remove('open');
-  const {serialNumber, campo} = popupCtx;
-  if (!serialNumber && serialNumber !== 0) return;
+  const {rowId, campo} = popupCtx;
+  if (rowId === undefined || rowId === null) return;
   resetPopupOpts();
-  const row = rawData.find(r => String(r.serialNumber) === String(serialNumber));
-  const valorAnterior = row ? row[campo] : '—';
+  const row = rawData.find(r => r.rowId === rowId);
+  const valorAnterior = row ? (row[campo] || '—') : '—';
   if (row) {
     row[campo] = nuevoValor;
-    const rowF = filtrados.find(r => String(r.serialNumber) === String(serialNumber));
+    const rowF = filtrados.find(r => r.rowId === rowId);
     if (rowF) rowF[campo] = nuevoValor;
   }
-  registrarLog(serialNumber, row?.nHall, campo, valorAnterior, nuevoValor);
+  registrarLog(row?.serialNumber, row?.nHall, campo, valorAnterior, nuevoValor);
   renderTabla(filtrados);
   renderResponsables(filtrados);
   toast('Guardando...', 1500);
@@ -1172,7 +1199,7 @@ async function recargar(){
     try{
       const json=JSON.parse(text);
       if(!Array.isArray(json))throw new Error('no array');
-      rows=json.map(mapRow).filter(r=>String(r.serialNumber)||r.desc);
+      rows=json.map((r,i)=>({...mapRow(r), rowId: i})).filter(r=>String(r.serialNumber)||r.desc);
     }catch(e){
       const lines=text.trim().split('\n');
       const sep=lines[0].includes('\t')?'\t':',';
@@ -1181,7 +1208,7 @@ async function recargar(){
         const vals=line.split(sep).map(v=>v.trim().replace(/^"|"$/g,''));
         const obj={};headers.forEach((h,i)=>obj[h]=vals[i]||'');return obj;
       });
-      rows=objs.map(mapRow).filter(r=>String(r.serialNumber)||r.desc);
+      rows=objs.map((r,i)=>({...mapRow(r), rowId: i})).filter(r=>String(r.serialNumber)||r.desc);
     }
     if(!rows.length)throw new Error('Sin datos válidos');
     // Filtrar solo desde 01/01/2025
@@ -1261,7 +1288,7 @@ function doLogout(){
 // ─── LOG DE CAMBIOS ────────────────────────────────────────────────────────
 let LOG_CAMBIOS = [];
 
-function registrarLog(serialNumber, nHall, campo, valorAnterior, valorNuevo){
+async function registrarLog(serialNumber, nHall, campo, valorAnterior, valorNuevo){
   if(!SESSION) return;
   const camposLabel = {
     estCorr:'1. Corrección', estCierre:'2. Cierre Hallazgo',
@@ -1278,8 +1305,18 @@ function registrarLog(serialNumber, nHall, campo, valorAnterior, valorNuevo){
     anterior: valorAnterior || '—',
     nuevo: valorNuevo
   };
-  LOG_CAMBIOS.unshift(entry); // más reciente primero
+  LOG_CAMBIOS.unshift(entry);
   renderLog();
+  // Persistir en Sheet
+  try {
+    console.log('Persistiendo log:', entry);
+    const res = await fetch(API_URL(), {
+      method:'POST',
+      body: JSON.stringify({action:'log', ...entry})
+    });
+    const resp = await res.json();
+    console.log('Log persistido:', resp);
+  } catch(err) { console.warn('Log no persistido:', err); }
 }
 
 function renderLog(){
