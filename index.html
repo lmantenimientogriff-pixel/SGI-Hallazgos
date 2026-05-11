@@ -483,7 +483,7 @@ const MS_PLACEHOLDERS={empresa:'Empresa',un:'Unidad negocio',depto:'Departamento
 let msOpts={};
 
 function poblarFiltros(data){
-  const sets={empresa:new Set(),un:new Set(),depto:new Set(),tipo:new Set(),origen:new Set(),estcorr:new Set(),estacc:new Set(),crit:new Set(),resp:new Set()};
+  const sets={empresa:new Set(),un:new Set(),depto:new Set(),tipo:new Set(),origen:new Set(),estcorr:new Set(),estacc:new Set(),crit:new Set(),resp:new Set(),respcorr:new Set(),respacc:new Set()};
   data.forEach(r=>{
     if(r.empresa)sets.empresa.add(r.empresa);
     if(r.unNegocio)sets.un.add(r.unNegocio);
