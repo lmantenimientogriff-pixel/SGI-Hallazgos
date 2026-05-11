@@ -202,11 +202,65 @@ tbody tr:hover td{background:var(--surface2)}
 .edit-obs:focus{border-color:var(--blue)}
 .field-group{display:flex;flex-direction:column;gap:3px}
 .field-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:36px 40px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.login-logo-badge{background:var(--text);color:var(--bg);font-size:11px;font-weight:700;padding:4px 10px;border-radius:5px;letter-spacing:.6px}
+.login-title{font-size:16px;font-weight:600;margin-bottom:6px}
+.login-sub{font-size:11px;color:var(--text3);margin-bottom:24px}
+.login-field{margin-bottom:14px}
+.login-field label{font-size:11px;color:var(--text2);display:block;margin-bottom:5px;font-weight:500}
+.login-field input{width:100%;font-size:13px;padding:8px 11px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);outline:none}
+.login-field input:focus{border-color:var(--blue)}
+.login-btn{width:100%;font-size:13px;padding:9px;border-radius:var(--r);border:none;background:var(--text);color:var(--bg);cursor:pointer;font-weight:600;margin-top:6px;transition:opacity .15s}
+.login-btn:hover{opacity:.85}
+.login-error{font-size:11px;color:var(--red);margin-top:10px;text-align:center;min-height:16px}
+.login-version{font-size:10px;color:var(--text3);text-align:center;margin-top:16px}
+/* USER BAR */
+.user-bar{display:flex;align-items:center;gap:10px;padding:6px 12px;background:var(--surface2);border-radius:var(--r);margin-bottom:12px;font-size:11px}
+.user-bar .uname{font-weight:600;color:var(--text)}
+.user-bar .urole{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.urole.admin{background:var(--red-bg);color:var(--red-text)}
+.urole.responsable{background:var(--blue-bg);color:var(--blue-text)}
+.urole.lectura{background:var(--surface3);color:var(--text2)}
+.user-bar .ulogout{margin-left:auto;cursor:pointer;font-size:11px;color:var(--text3);background:none;border:none;padding:3px 8px;border-radius:5px}
+.user-bar .ulogout:hover{background:var(--surface);color:var(--text)}
+/* LOG TAB */
+.log-table{width:100%;border-collapse:collapse;font-size:11px}
+.log-table th{text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.log-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.log-table tbody tr:hover td{background:var(--surface2)}
 </style>
 </head>
 <body>
 <div id="overlay"><div class="spinner"></div><span id="overlay-txt">Cargando hallazgos...</span></div>
 <div class="toast" id="toast"></div>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="login-logo-badge">GRIFFOULIERE</span>
+      <span style="font-size:11px;color:var(--text3)">SGI</span>
+    </div>
+    <div class="login-title">Tablero de Hallazgos</div>
+    <div class="login-sub">Ingresá con tu usuario y contraseña</div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="login-user" placeholder="ej: ftoso" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-version">REV 07 · 11/05/2026</div>
+  </div>
+</div>
+
 <div class="wrap">
 
   <div class="header">
@@ -214,12 +268,19 @@ tbody tr:hover td{background:var(--surface2)}
       <div style="margin-bottom:4px"><span class="logo-badge">GRIFFOULIERE</span><span style="font-size:11px;color:var(--text3)">Sistema de Gestión Integrado</span></div>
       <h1>Tablero de Hallazgos SGI</h1>
       <div class="sub" id="subtitle">Cargando...</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">04</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">07</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
     </div>
     <div class="hactions">
       <button onclick="recargar()"><i class="ti ti-refresh"></i> Actualizar</button>
       <button onclick="usarDemo()"><i class="ti ti-player-play"></i> Demo</button>
     </div>
+  </div>
+
+  <!-- USER BAR -->
+  <div class="user-bar" id="user-bar" style="display:none">
+    <span class="uname" id="ub-nombre">—</span>
+    <span class="urole" id="ub-rol">—</span>
+    <button class="ulogout" onclick="doLogout()"><i class="ti ti-logout"></i> Salir</button>
   </div>
 
   <div class="url-row">
@@ -284,6 +345,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="tab active" onclick="switchTab('graficos',this)"><i class="ti ti-chart-bar" style="font-size:12px"></i> Gráficos</div>
     <div class="tab" onclick="switchTab('responsables',this)"><i class="ti ti-users" style="font-size:12px"></i> Responsables</div>
     <div class="tab" onclick="switchTab('detalle',this)"><i class="ti ti-table" style="font-size:12px"></i> Detalle</div>
+    <div class="tab" id="tab-log-btn" onclick="switchTab('log',this)" style="display:none"><i class="ti ti-history" style="font-size:12px"></i> Log de cambios</div>
   </div>
 
   <!-- TAB GRÁFICOS -->
@@ -356,6 +418,43 @@ tbody tr:hover td{background:var(--surface2)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
+
+const USUARIOS = [
+  {u:'galeo',         p:'Aleo123',   nombre:'ALEO GUSTAVO JOAQUIN',              rol:'lectura'},
+  {u:'vanci',         p:'Anci123',   nombre:'ANCI VALERIA FATIMA',               rol:'lectura'},
+  {u:'wantonio',      p:'Anton123',  nombre:'ANTONIO WALTER',                    rol:'lectura'},
+  {u:'pbalmaceda',    p:'Balma123',  nombre:'BALMACEDA PABLO ENRIQUE',           rol:'lectura'},
+  {u:'mblanco',       p:'Blanc123',  nombre:'BLANCO MARIA PAZ',                  rol:'responsable'},
+  {u:'ebuttini',      p:'Butti123',  nombre:'BUTTINI ENRIQUE',                   rol:'lectura'},
+  {u:'dcaceres',      p:'Cacer123',  nombre:'CACERES DENISE ELIZABETH',          rol:'responsable'},
+  {u:'fcaneva',       p:'Canev123',  nombre:'CANEVA FRANCO ANDRES',              rol:'admin'},
+  {u:'jcordoba',      p:'Cordo123',  nombre:'CORDOBA JONATHAN ABEL',             rol:'responsable'},
+  {u:'jdaminato',     p:'Damin123',  nombre:'DAMINATO JUAN LUIS',                rol:'responsable'},
+  {u:'mfassi',        p:'Fassi123',  nombre:'FASSI MARIA EUGENIA',               rol:'lectura'},
+  {u:'fflores',       p:'Flore123',  nombre:'FLORES FRATTI ERIC FRANCO',         rol:'responsable'},
+  {u:'ogullo',        p:'Gullo123',  nombre:'GULLO OMAR ROBERTO',                rol:'responsable'},
+  {u:'airrera',       p:'Irrer123',  nombre:'IRRERA ANA MARIA ROSA',             rol:'responsable'},
+  {u:'virrera',       p:'Irre2123',  nombre:'IRRERA VIVIANA',                    rol:'responsable'},
+  {u:'julieta',       p:'Julie123',  nombre:'JULIETA OLIVENCIA',                 rol:'lectura'},
+  {u:'fkoryl',        p:'Koryl123',  nombre:'KORYL FABIAN ALEJANDRO',            rol:'responsable'},
+  {u:'clatrompette',  p:'Latro123',  nombre:'LATROMPETTE CIAFRELLI HERNAN JAVIER',rol:'responsable'},
+  {u:'clisotti',      p:'Lisot123',  nombre:'LISOTTI CHRISTIAN FABIAN',          rol:'lectura'},
+  {u:'blopez',        p:'Lopez123',  nombre:'LOPEZ BADINO IGNACIO JOSE',         rol:'lectura'},
+  {u:'slucero',       p:'Lucer123',  nombre:'LUCERO SENDRA MARTIN ALEJANDRO',    rol:'lectura'},
+  {u:'vmartinez',     p:'Marti123',  nombre:'MARTINEZ VIADEMONTE ROCIO ABIGAIL', rol:'responsable'},
+  {u:'lmendoza',      p:'Mendo123',  nombre:'MENDOZA LUIS IVAN',                 rol:'lectura'},
+  {u:'npacheco',      p:'Pache123',  nombre:'PACHECO NICOLAS AGUSTIN',           rol:'lectura'},
+  {u:'jsalvatella',   p:'Salva123',  nombre:'SALVATELLA JAIME RAMIRO',           rol:'responsable'},
+  {u:'esanchez',      p:'Sanch123',  nombre:'SANCHEZ ERNESTO DANIEL',            rol:'lectura'},
+  {u:'mserrano',      p:'Serra123',  nombre:'SERRANO MARIA VICTORIA',            rol:'lectura'},
+  {u:'psoto',         p:'Soto123',   nombre:'SOTO PAULA',                        rol:'responsable'},
+  {u:'ftoso',         p:'Toso123',   nombre:'TOSO FEDERICO',                     rol:'responsable'},
+  {u:'jzaina',        p:'Zaina123',  nombre:'ZAINA JORGE',                       rol:'admin'},
+  {u:'ggriffouliere', p:'Griff123',  nombre:'GRIFFOULIERE GERMAN',               rol:'admin'},
+];
+
+let SESSION = null; // {u, nombre, rol}
+
 // ─── estado global ────────────────────────────────────────────────────────
 let rawData=[],filtrados=[],charts={},sortCol='serialNumber',sortAsc=false;
 
@@ -442,9 +541,13 @@ function resetPopupOpts() {
 }
 
 async function saveField(serialNumber, campo, valor) {
-  // Actualizar localmente
+  // Actualizar localmente en rawData y filtrados
   const row = rawData.find(r => String(r.serialNumber) === String(serialNumber));
+  const valorAnterior = row ? (row[campo] || '—') : '—';
   if (row) row[campo] = valor;
+  const rowF = filtrados.find(r => String(r.serialNumber) === String(serialNumber));
+  if (rowF) rowF[campo] = valor;
+  registrarLog(serialNumber, row?.nHall, campo, valorAnterior, valor);
   try {
     const res = await fetch(API_URL(), {
       method: 'POST',
@@ -903,6 +1006,7 @@ function renderTabla(data){
     </tr>`;
   }).join('');
   document.getElementById('tbody-main').innerHTML=rows||'<tr><td colspan="15" class="empty">Sin resultados para los filtros seleccionados</td></tr>';
+  if(SESSION&&SESSION.rol==='lectura'){document.querySelectorAll('.pill-btn').forEach(b=>b.disabled=true);document.querySelectorAll('.edit-date').forEach(i=>i.disabled=true);}
 }
 
 // ─── EXPORTAR ─────────────────────────────────────────────────────────────
@@ -969,8 +1073,15 @@ async function setEstado(nuevoValor) {
   if (!serialNumber && serialNumber !== 0) return;
   resetPopupOpts();
   const row = rawData.find(r => String(r.serialNumber) === String(serialNumber));
-  if (row) row[campo] = nuevoValor;
-  aplicarFiltros();
+  const valorAnterior = row ? row[campo] : '—';
+  if (row) {
+    row[campo] = nuevoValor;
+    const rowF = filtrados.find(r => String(r.serialNumber) === String(serialNumber));
+    if (rowF) rowF[campo] = nuevoValor;
+  }
+  registrarLog(serialNumber, row?.nHall, campo, valorAnterior, nuevoValor);
+  renderTabla(filtrados);
+  renderResponsables(filtrados);
   toast('Guardando...', 1500);
   try {
     const res = await fetch(API_URL(), {
@@ -1073,7 +1184,13 @@ async function recargar(){
       rows=objs.map(mapRow).filter(r=>String(r.serialNumber)||r.desc);
     }
     if(!rows.length)throw new Error('Sin datos válidos');
-    rawData=rows;filtrados=[...rawData];
+    // Filtrar solo desde 01/01/2025
+    const fechaCorte = new Date(2025, 0, 1);
+    rawData=rows.filter(r=>{
+      const d = parseDate(r.fechaAud);
+      return d && d >= fechaCorte;
+    });
+    filtrados=[...rawData];
     poblarFiltros(rawData);aplicarFiltros();
     setStatus('live',`${rawData.length} hallazgos cargados en tiempo real`);
     document.getElementById('subtitle').textContent=`${rawData.length} hallazgos · Datos en vivo · Google Sheets`;
@@ -1100,7 +1217,107 @@ function usarDemo(){
   toast('Modo demo activado');
 }
 
-recargar();
+
+// ─── LOGIN ────────────────────────────────────────────────────────────────
+function doLogin(){
+  const u = document.getElementById('login-user').value.trim().toLowerCase();
+  const p = document.getElementById('login-pass').value;
+  const usr = USUARIOS.find(x => x.u === u && x.p === p);
+  if(!usr){
+    document.getElementById('login-error').textContent = 'Usuario o contraseña incorrectos';
+    document.getElementById('login-pass').value = '';
+    return;
+  }
+  SESSION = usr;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('user-bar').style.display = 'flex';
+  document.getElementById('ub-nombre').textContent = usr.nombre;
+  const rolEl = document.getElementById('ub-rol');
+  rolEl.textContent = usr.rol.charAt(0).toUpperCase() + usr.rol.slice(1);
+  rolEl.className = 'urole ' + usr.rol;
+  // Mostrar pestaña log solo para admin
+  if(usr.rol === 'admin'){
+    document.getElementById('tab-log-btn').style.display = '';
+  }
+  // Deshabilitar edición para lectura
+  if(usr.rol === 'lectura'){
+    document.querySelectorAll('.pill-btn').forEach(b => b.disabled = true);
+    document.querySelectorAll('.edit-date').forEach(i => i.disabled = true);
+  }
+  recargar();
+}
+
+function doLogout(){
+  SESSION = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('user-bar').style.display = 'none';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('tab-log-btn').style.display = 'none';
+  rawData=[];filtrados=[];
+}
+
+// ─── LOG DE CAMBIOS ────────────────────────────────────────────────────────
+let LOG_CAMBIOS = [];
+
+function registrarLog(serialNumber, nHall, campo, valorAnterior, valorNuevo){
+  if(!SESSION) return;
+  const camposLabel = {
+    estCorr:'1. Corrección', estCierre:'2. Cierre Hallazgo',
+    estAcc:'3. Acción Correctiva', estVerif:'4. Verif. Eficacia',
+    fImplCorr:'F. Impl. Corrección', fImpl:'F. Impl. Acción',
+    obsVerif:'Obs. Verificación'
+  };
+  const entry = {
+    ts: new Date().toLocaleString('es-AR'),
+    usuario: SESSION.u,
+    nombre: SESSION.nombre,
+    nHall: nHall || ('#'+serialNumber),
+    campo: camposLabel[campo] || campo,
+    anterior: valorAnterior || '—',
+    nuevo: valorNuevo
+  };
+  LOG_CAMBIOS.unshift(entry); // más reciente primero
+  renderLog();
+}
+
+function renderLog(){
+  const tbody = document.getElementById('log-tbody');
+  if(!LOG_CAMBIOS.length){
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">Sin cambios registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = LOG_CAMBIOS.map(e => `<tr>
+    <td style="white-space:nowrap;font-size:11px">${e.ts}</td>
+    <td><strong>${e.usuario}</strong></td>
+    <td style="font-size:11px">${e.nombre}</td>
+    <td><strong>${e.nHall}</strong></td>
+    <td style="font-size:11px">${e.campo}</td>
+    <td style="font-size:11px;color:var(--red-text)">${e.anterior}</td>
+    <td style="font-size:11px;color:var(--green-text)">${e.nuevo}</td>
+  </tr>`).join('');
+}
+
+function limpiarLog(){
+  if(confirm('¿Limpiar todo el log de cambios?')){
+    LOG_CAMBIOS = [];
+    renderLog();
+  }
+}
+
+function exportarLogExcel(){
+  if(!LOG_CAMBIOS.length){toast('No hay cambios para exportar');return;}
+  const filas = LOG_CAMBIOS.map(e=>({'Fecha/Hora':e.ts,'Usuario':e.usuario,'Nombre':e.nombre,'N° Hallazgo':e.nHall,'Campo':e.campo,'Valor anterior':e.anterior,'Valor nuevo':e.nuevo}));
+  const ws = XLSX.utils.json_to_sheet(filas);
+  ws['!cols'] = Array(7).fill({wch:22});
+  const wb2 = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb2, ws, 'Log de Cambios');
+  XLSX.writeFile(wb2, `Log_Cambios_SGI_${new Date().toLocaleDateString('es-AR').replace(/\//g,'-')}.xlsx`);
+  toast('Log exportado ✓');
+}
+
+// recargar() se llama desde doLogin()
 </script>
 </body>
 </html>
