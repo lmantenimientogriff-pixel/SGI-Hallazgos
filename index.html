@@ -232,6 +232,28 @@ tbody tr:hover td{background:var(--surface2)}
 .log-table th{text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);background:var(--surface2)}
 .log-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
 .log-table tbody tr:hover td{background:var(--surface2)}
+
+/* GESTIÓN USUARIOS */
+.usr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:14px}
+.usr-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:13px 15px;display:flex;flex-direction:column;gap:6px}
+.usr-card-header{display:flex;align-items:center;gap:10px}
+.usr-card-av{width:34px;height:34px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text2);flex-shrink:0}
+.usr-card-info{flex:1;overflow:hidden}
+.usr-card-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usr-card-user{font-size:10px;color:var(--text3)}
+.usr-card-actions{display:flex;gap:6px;margin-top:4px}
+.usr-card-actions button{font-size:10px;padding:3px 9px}
+.usr-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;align-items:center;justify-content:center}
+.usr-modal-overlay.open{display:flex}
+.usr-modal{background:var(--surface);border-radius:var(--rl);padding:24px;width:400px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+.usr-modal-title{font-size:15px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.usr-field{margin-bottom:12px}
+.usr-field label{font-size:10px;color:var(--text2);display:block;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.usr-field input,.usr-field select{width:100%;font-size:12px;padding:7px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);outline:none}
+.usr-field input:focus,.usr-field select:focus{border-color:var(--blue)}
+.usr-modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.usr-search{display:flex;gap:8px;margin-bottom:12px}
+.usr-search input{flex:1;font-size:12px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none}
 </style>
 </head>
 <body>
@@ -268,7 +290,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div style="margin-bottom:4px"><span class="logo-badge">GRIFFOULIERE</span><span style="font-size:11px;color:var(--text3)">Sistema de Gestión Integrado</span></div>
       <h1>Tablero de Hallazgos SGI</h1>
       <div class="sub" id="subtitle">Cargando...</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">08</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">11</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
     </div>
     <div class="hactions">
       <button onclick="recargar()"><i class="ti ti-refresh"></i> Actualizar</button>
@@ -346,6 +368,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="tab" onclick="switchTab('responsables',this)"><i class="ti ti-users" style="font-size:12px"></i> Responsables</div>
     <div class="tab" onclick="switchTab('detalle',this)"><i class="ti ti-table" style="font-size:12px"></i> Detalle</div>
     <div class="tab" id="tab-log-btn" onclick="switchTab('log',this)" style="display:none"><i class="ti ti-history" style="font-size:12px"></i> Log de cambios</div>
+    <div class="tab" id="tab-usr-btn" onclick="switchTab('usuarios',this)" style="display:none"><i class="ti ti-users" style="font-size:12px"></i> Usuarios</div>
   </div>
 
   <!-- TAB GRÁFICOS -->
@@ -403,6 +426,22 @@ tbody tr:hover td{background:var(--surface2)}
   </div>
 
   
+
+<!-- MODAL USUARIO -->
+<div class="usr-modal-overlay" id="usr-modal-overlay">
+  <div class="usr-modal">
+    <div class="usr-modal-title"><i class="ti ti-user"></i> <span id="usr-modal-title">Nuevo usuario</span></div>
+    <div class="usr-field"><label>Nombre completo</label><input type="text" id="um-nombre" placeholder="APELLIDO NOMBRE"></div>
+    <div class="usr-field"><label>Usuario (login)</label><input type="text" id="um-usuario" placeholder="ej: ftoso"></div>
+    <div class="usr-field"><label>Contraseña</label><input type="text" id="um-pass" placeholder="ej: Toso123"></div>
+    <div class="usr-field"><label>Rol</label><select id="um-rol"><option value="lectura">Lectura</option><option value="responsable">Responsable</option><option value="admin">Admin</option></select></div>
+    <div class="usr-field"><label>Empresa (opcional)</label><input type="text" id="um-empresa" placeholder="Griffoil, Transgriff..."></div>
+    <div class="usr-field"><label>Observaciones</label><input type="text" id="um-obs" placeholder=""></div>
+    <div id="um-error" style="font-size:11px;color:var(--red);min-height:16px;margin-top:4px"></div>
+    <div class="usr-modal-actions"><button onclick="cerrarModalUsr()">Cancelar</button><button class="primary" onclick="guardarUsuario()"><i class="ti ti-check"></i> Guardar</button></div>
+  </div>
+</div>
+
 <div class="estado-popup" id="estado-popup">
   <div class="estado-popup-title" id="popup-title">Cambiar estado</div>
   <div id="popup-opts">
@@ -411,6 +450,41 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="estado-opt" onclick="setEstado('PENDIENTE')"><span class="dot" style="background:#E24B4A"></span>Pendiente</div>
   </div>
 </div>
+
+  <!-- TAB LOG -->
+  <div class="tcontent" id="tab-log">
+    <div class="tbl-card">
+      <div class="tbl-hdr">
+        <div class="ct">Log de cambios</div>
+        <div class="ebtns">
+          <button class="btn-green" onclick="exportarLogExcel()"><i class="ti ti-file-spreadsheet"></i> Exportar</button>
+          <button onclick="limpiarLog()" style="color:var(--red-text)"><i class="ti ti-trash"></i> Limpiar</button>
+        </div>
+      </div>
+      <div class="twrap">
+        <table class="log-table">
+          <thead><tr>
+            <th>Fecha/Hora</th><th>Usuario</th><th>Nombre</th>
+            <th>N° Hallazgo</th><th>Campo</th>
+            <th>Valor anterior</th><th>Valor nuevo</th>
+          </tr></thead>
+          <tbody id="log-tbody"><tr><td colspan="7" class="empty">Sin cambios registrados</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB USUARIOS -->
+  <div class="tcontent" id="tab-usuarios">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;font-weight:600">Gestión de usuarios <span id="usr-count" style="font-size:11px;color:var(--text3)"></span></div>
+      <button class="primary" onclick="abrirModalUsr()"><i class="ti ti-user-plus"></i> Nuevo usuario</button>
+    </div>
+    <div class="usr-search">
+      <input type="text" id="usr-buscar" placeholder="Buscar por nombre o usuario..." oninput="filtrarUsuarios()">
+    </div>
+    <div class="usr-grid" id="usr-grid"><div class="empty">Cargando usuarios...</div></div>
+  </div>
 
 <div class="footer">Griffouliere S.A. · SGI · Datos en tiempo real desde Google Sheets</div>
 </div>
@@ -495,8 +569,10 @@ function switchTab(id,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tcontent').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('tab-'+id).classList.add('active');
+  const tabEl = document.getElementById('tab-'+id);
+  if(tabEl) tabEl.classList.add('active');
   if(id==='log' && SESSION && SESSION.rol==='admin') cargarLogSheet();
+  if(id==='usuarios' && SESSION && SESSION.rol==='admin') cargarUsuariosSheet();
 }
 
 async function cargarLogSheet(){
@@ -1265,6 +1341,8 @@ function doLogin(){
   // Mostrar pestaña log solo para admin
   if(usr.rol === 'admin'){
     document.getElementById('tab-log-btn').style.display = '';
+    document.getElementById('tab-usr-btn').style.display = '';
+    cargarUsuariosSheet();
   }
   // Deshabilitar edición para lectura
   if(usr.rol === 'lectura'){
@@ -1282,6 +1360,7 @@ function doLogout(){
   document.getElementById('login-pass').value = '';
   document.getElementById('login-error').textContent = '';
   document.getElementById('tab-log-btn').style.display = 'none';
+  document.getElementById('tab-usr-btn').style.display = 'none';
   rawData=[];filtrados=[];
 }
 
@@ -1353,6 +1432,199 @@ function exportarLogExcel(){
   XLSX.writeFile(wb2, `Log_Cambios_SGI_${new Date().toLocaleDateString('es-AR').replace(/\//g,'-')}.xlsx`);
   toast('Log exportado ✓');
 }
+
+
+// ─── GESTIÓN USUARIOS ────────────────────────────────────────────────────
+let USUARIOS_SHEET = []; // usuarios cargados desde el Sheet
+let USR_EDIT = null; // usuario en edición
+
+async function cargarUsuariosSheet(){
+  try{
+    const res = await fetch(API_URL()+'?action=getUsuarios');
+    const data = await res.json();
+    if(Array.isArray(data) && data.length > 0){
+      USUARIOS_SHEET = data.map(r=>({
+        nombre: r['Nombre completo']||'',
+        u: r['Usuario (login)']||'',
+        p: r['Contraseña']||'',
+        rol: (r['Rol']||'lectura').toLowerCase(),
+        empresa: r['Empresa']||'',
+        obs: r['Obs.']||''
+      }));
+      // Sincronizar con array local USUARIOS
+      USUARIOS.length = 0;
+      USUARIOS_SHEET.forEach(u => USUARIOS.push(u));
+    }
+    renderUsuarios(USUARIOS_SHEET);
+  } catch(err){
+    console.warn('No se pudieron cargar usuarios del Sheet:', err);
+    renderUsuarios(USUARIOS);
+  }
+}
+
+function renderUsuarios(lista){
+  const busq = (document.getElementById('usr-buscar')?.value||'').toLowerCase();
+  const filtrada = lista.filter(u =>
+    u.nombre.toLowerCase().includes(busq) || u.u.toLowerCase().includes(busq)
+  );
+  document.getElementById('usr-count').textContent = `(${filtrada.length} usuarios)`;
+  const rolColors = {admin:'var(--red-bg)',responsable:'var(--blue-bg)',lectura:'var(--surface2)'};
+  const rolTextColors = {admin:'var(--red-text)',responsable:'var(--blue-text)',lectura:'var(--text2)'};
+  document.getElementById('usr-grid').innerHTML = filtrada.map(u => {
+    const ini = u.nombre.trim().split(' ').filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()||'?';
+    return `<div class="usr-card">
+      <div class="usr-card-header">
+        <div class="usr-card-av">${ini}</div>
+        <div class="usr-card-info">
+          <div class="usr-card-name" title="${u.nombre}">${u.nombre}</div>
+          <div class="usr-card-user">${u.u} &nbsp;·&nbsp; <span style="background:${rolColors[u.rol]||'var(--surface2)'};color:${rolTextColors[u.rol]||'var(--text2)'};padding:1px 7px;border-radius:8px;font-size:10px;font-weight:600">${u.rol}</span></div>
+        </div>
+      </div>
+      ${u.empresa?`<div style="font-size:10px;color:var(--text3)">${u.empresa}</div>`:''}
+      <div class="usr-card-actions">
+        <button onclick="editarUsuario('${u.u}')"><i class="ti ti-pencil"></i> Editar</button>
+        <button onclick="eliminarUsuario('${u.u}')" style="color:var(--red-text);border-color:var(--red)"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty">Sin usuarios encontrados</div>';
+}
+
+function filtrarUsuarios(){
+  renderUsuarios(USUARIOS_SHEET.length ? USUARIOS_SHEET : USUARIOS);
+}
+
+function abrirModalUsr(usr=null){
+  USR_EDIT = usr;
+  document.getElementById('usr-modal-title').textContent = usr ? 'Editar usuario' : 'Nuevo usuario';
+  document.getElementById('um-nombre').value = usr?.nombre||'';
+  document.getElementById('um-usuario').value = usr?.u||'';
+  document.getElementById('um-usuario').disabled = !!usr; // no editar login existente
+  document.getElementById('um-pass').value = usr?.p||'';
+  document.getElementById('um-rol').value = usr?.rol||'lectura';
+  document.getElementById('um-empresa').value = usr?.empresa||'';
+  document.getElementById('um-obs').value = usr?.obs||'';
+  document.getElementById('um-error').textContent = '';
+  document.getElementById('usr-modal-overlay').classList.add('open');
+  document.getElementById('um-nombre').focus();
+}
+
+function editarUsuario(login){
+  const usr = (USUARIOS_SHEET.length ? USUARIOS_SHEET : USUARIOS).find(u=>u.u===login);
+  if(usr) abrirModalUsr(usr);
+}
+
+function cerrarModalUsr(){
+  document.getElementById('usr-modal-overlay').classList.remove('open');
+  document.getElementById('um-usuario').disabled = false;
+  USR_EDIT = null;
+}
+
+async function guardarUsuario(){
+  const nombre = document.getElementById('um-nombre').value.trim();
+  const usuario = document.getElementById('um-usuario').value.trim().toLowerCase();
+  const pass = document.getElementById('um-pass').value.trim();
+  const rol = document.getElementById('um-rol').value;
+  const empresa = document.getElementById('um-empresa').value.trim();
+  const obs = document.getElementById('um-obs').value.trim();
+  const errEl = document.getElementById('um-error');
+
+  if(!nombre||!usuario||!pass){errEl.textContent='Nombre, usuario y contraseña son obligatorios';return;}
+  if(!USR_EDIT){
+    const existe = (USUARIOS_SHEET.length?USUARIOS_SHEET:USUARIOS).find(u=>u.u===usuario);
+    if(existe){errEl.textContent='Ese nombre de usuario ya existe';return;}
+  }
+
+  errEl.textContent='Guardando...';
+  try{
+    const res = await fetch(API_URL(),{
+      method:'POST',
+      body: JSON.stringify({action:'saveUsuario', nombre, usuario, password:pass, rol, empresa, obs})
+    });
+    const data = await res.json();
+    if(data.ok){
+      toast(`Usuario ${data.action==='created'?'creado':'actualizado'} ✓`);
+      cerrarModalUsr();
+      await cargarUsuariosSheet();
+    } else {
+      errEl.textContent = 'Error: '+(data.error||'desconocido');
+    }
+  } catch(err){
+    // Guardar localmente si falla el Sheet
+    const lista = USUARIOS_SHEET.length?USUARIOS_SHEET:USUARIOS;
+    const idx = lista.findIndex(u=>u.u===(USR_EDIT?.u||usuario));
+    const newUsr = {nombre,u:usuario,p:pass,rol,empresa,obs};
+    if(idx>=0) lista[idx]=newUsr; else lista.push(newUsr);
+    USUARIOS.length=0; lista.forEach(u=>USUARIOS.push(u));
+    toast('Guardado localmente (sin conexión al Sheet)');
+    cerrarModalUsr();
+    renderUsuarios(lista);
+  }
+}
+
+async function eliminarUsuario(login){
+  if(!confirm(`¿Eliminar al usuario "${login}"? Esta acción no se puede deshacer.`)) return;
+  try{
+    const res = await fetch(API_URL(),{
+      method:'POST',
+      body: JSON.stringify({action:'deleteUsuario', usuario:login})
+    });
+    const data = await res.json();
+    if(data.ok){
+      toast('Usuario eliminado ✓');
+      await cargarUsuariosSheet();
+    } else {
+      toast('Error: '+(data.error||'desconocido'),3000);
+    }
+  } catch(err){
+    const lista = USUARIOS_SHEET.length?USUARIOS_SHEET:USUARIOS;
+    const idx = lista.findIndex(u=>u.u===login);
+    if(idx>=0) lista.splice(idx,1);
+    USUARIOS.length=0; lista.forEach(u=>USUARIOS.push(u));
+    renderUsuarios(lista);
+    toast('Eliminado localmente');
+  }
+}
+
+// Cerrar modal al click fuera
+document.addEventListener('click', e=>{
+  if(e.target.id==='usr-modal-overlay') cerrarModalUsr();
+});
+
+// ─── INICIALIZACIÓN ──────────────────────────────────────────────────────
+async function inicializar(){
+  // Intentar cargar usuarios desde el Sheet
+  try {
+    const res = await fetch(API_URL()+'?action=getUsuarios');
+    const data = await res.json();
+    if(Array.isArray(data) && data.length > 0){
+      // Reemplazar array hardcodeado con datos del Sheet
+      USUARIOS.length = 0;
+      data.forEach(r => {
+        USUARIOS.push({
+          u: r['Usuario (login)']||'',
+          p: r['Contraseña']||'',
+          nombre: r['Nombre completo']||'',
+          rol: (r['Rol']||'lectura').toLowerCase(),
+          empresa: r['Empresa']||'',
+          obs: r['Obs.']||''
+        });
+      });
+      USUARIOS_SHEET = [...USUARIOS];
+      document.getElementById('login-sub').textContent = 'Ingresá con tu usuario y contraseña';
+    } else {
+      document.getElementById('login-sub').textContent = 'Ingresá con tu usuario y contraseña';
+    }
+  } catch(err) {
+    console.warn('Usando usuarios locales:', err);
+    document.getElementById('login-sub').textContent = 'Ingresá con tu usuario y contraseña';
+  }
+  // Mostrar formulario de login
+  document.getElementById('login-form').style.display = 'block';
+  document.getElementById('login-user').focus();
+}
+
+// Iniciar al cargar
+inicializar();
 
 // recargar() se llama desde doLogin()
 </script>
