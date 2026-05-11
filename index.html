@@ -226,6 +226,8 @@ tbody tr:hover td{background:var(--surface2)}
       <div class="fi"><label>Estado acción</label><div class="ms-wrapper" id="ms-estacc"></div></div>
       <div class="fi"><label>Criticidad</label><div class="ms-wrapper" id="ms-crit"></div></div>
       <div class="fi"><label>Responsable directo</label><div class="ms-wrapper" id="ms-resp"></div></div>
+      <div class="fi"><label>Resp. implementación corrección</label><div class="ms-wrapper" id="ms-respcorr"></div></div>
+      <div class="fi"><label>Resp. acción correctiva</label><div class="ms-wrapper" id="ms-respacc"></div></div>
       <div class="fi"><label>Vencimiento</label><div class="ms-wrapper" id="ms-venc"></div></div>
       <div class="fi" style="grid-column:span 2">
         <label>Rango de fechas (Fecha relev./Aud.)</label>
@@ -267,11 +269,12 @@ tbody tr:hover td{background:var(--surface2)}
   <!-- TAB GRÁFICOS -->
   <div class="tcontent active" id="tab-graficos">
     <div class="charts">
-      <div class="chart-card"><div class="ct">1. Estado de correcciones (Col. U)</div><div style="position:relative;height:200px"><canvas id="c-estcorr" role="img" aria-label="Estado correcciones"></canvas></div></div>
+      <div class="chart-card"><div class="ct">1. Estado corrección (Col. U)</div><div style="position:relative;height:200px"><canvas id="c-estcorr" role="img" aria-label="Estado correcciones"></canvas></div></div>
+      <div class="chart-card"><div class="ct">2. Estado cierre hallazgo (Col. BL)</div><div style="position:relative;height:200px"><canvas id="c-estcierre" role="img" aria-label="Estado cierre hallazgo"></canvas></div></div>
+      <div class="chart-card"><div class="ct">3. Estado acción correctiva (Col. AC)</div><div style="position:relative;height:200px"><canvas id="c-estacc" role="img" aria-label="Estado acciones"></canvas></div></div>
+      <div class="chart-card"><div class="ct">4. Verificación de eficacia</div><div style="position:relative;height:200px"><canvas id="c-estverif" role="img" aria-label="Verificación eficacia"></canvas></div></div>
       <div class="chart-card"><div class="ct">Hallazgos por departamento (top 8)</div><div style="position:relative;height:200px"><canvas id="c-depto" role="img" aria-label="Por departamento"></canvas></div></div>
       <div class="chart-card"><div class="ct">Tipo de hallazgo</div><div style="position:relative;height:200px"><canvas id="c-tipo" role="img" aria-label="Tipo hallazgo"></canvas></div></div>
-      <div class="chart-card"><div class="ct">2. Estado acciones correctivas (Col. AC)</div><div style="position:relative;height:200px"><canvas id="c-estacc" role="img" aria-label="Estado acciones"></canvas></div></div>
-      <div class="chart-card"><div class="ct">3. Estado cierre hallazgo (Col. BL)</div><div style="position:relative;height:200px"><canvas id="c-estcierre" role="img" aria-label="Estado cierre hallazgo"></canvas></div></div>
       <div class="chart-card"><div class="ct">Hallazgos por empresa</div><div style="position:relative;height:200px"><canvas id="c-empresa" role="img" aria-label="Por empresa"></canvas></div></div>
       <div class="chart-card"><div class="ct">Vencimiento de acciones abiertas</div><div style="position:relative;height:200px"><canvas id="c-venc" role="img" aria-label="Vencimiento"></canvas></div></div>
     </div>
@@ -304,10 +307,10 @@ tbody tr:hover td{background:var(--surface2)}
             <th onclick="ordenar('respDir')">Responsable <span id="s-respDir">↕</span></th>
             <th onclick="ordenar('fMaxCorr')">F.Máx.Correc. <span id="s-fMaxCorr">↕</span></th>
             <th onclick="ordenar('estCorr')">1. Corrección <span id="s-estCorr">↕</span></th>
+            <th onclick="ordenar('estCierre')">2. Cierre Hallazgo <span id="s-estCierre">↕</span></th>
             <th onclick="ordenar('fImpl')">F.Impl.Acción <span id="s-fImpl">↕</span></th>
-            <th onclick="ordenar('estAcc')">2. Acción Correctiva <span id="s-estAcc">↕</span></th>
-            <th onclick="ordenar('estCierre')">3. Cierre Hallazgo <span id="s-estCierre">↕</span></th>
-            <th onclick="ordenar('estVerif')">Verif.Eficacia <span id="s-estVerif">↕</span></th>
+            <th onclick="ordenar('estAcc')">3. Acción Correctiva <span id="s-estAcc">↕</span></th>
+            <th onclick="ordenar('estVerif')">4. Verif.Eficacia <span id="s-estVerif">↕</span></th>
             <th onclick="ordenar('dias')">Vto. <span id="s-dias">↕</span></th>
           </tr></thead>
           <tbody id="tbody-main"><tr><td colspan="14" class="empty">Cargando datos...</td></tr></tbody>
@@ -326,7 +329,7 @@ tbody tr:hover td{background:var(--surface2)}
 let rawData=[],filtrados=[],charts={},sortCol='serialNumber',sortAsc=false;
 
 // selecciones multi-select por filtro
-const SEL={empresa:new Set(),un:new Set(),depto:new Set(),tipo:new Set(),origen:new Set(),estcorr:new Set(),estacc:new Set(),crit:new Set(),resp:new Set(),venc:new Set()};
+const SEL={empresa:new Set(),un:new Set(),depto:new Set(),tipo:new Set(),origen:new Set(),estcorr:new Set(),estacc:new Set(),crit:new Set(),resp:new Set(),venc:new Set(),respcorr:new Set(),respacc:new Set()};
 
 // opciones estáticas para vencimiento
 const VENC_OPTS=[{v:'vencido',l:'Vencidos'},{v:'7',l:'Próximos 7 días'},{v:'30',l:'Próximos 30 días'},{v:'abierto',l:'Todos abiertos'}];
@@ -476,7 +479,7 @@ document.addEventListener('click',e=>{
   }
 });
 
-const MS_PLACEHOLDERS={empresa:'Empresa',un:'Unidad negocio',depto:'Departamento',tipo:'Tipo',origen:'Origen',estcorr:'Estado correc.',estacc:'Estado acción',crit:'Criticidad',resp:'Responsable',venc:'Vencimiento'};
+const MS_PLACEHOLDERS={empresa:'Empresa',un:'Unidad negocio',depto:'Departamento',tipo:'Tipo',origen:'Origen',estcorr:'Estado correc.',estacc:'Estado acción',crit:'Criticidad',resp:'Resp. directo',venc:'Vencimiento',respcorr:'Resp. corrección',respacc:'Resp. acción correctiva'};
 let msOpts={};
 
 function poblarFiltros(data){
@@ -491,6 +494,8 @@ function poblarFiltros(data){
     if(r.estAcc&&r.estAcc.trim())sets.estacc.add(r.estAcc.trim());
     if(r.crit&&r.crit.trim())sets.crit.add(r.crit.trim());
     if(r.respDir)sets.resp.add(r.respDir);
+    if(r.respCorr&&r.respCorr.trim())sets.respcorr.add(r.respCorr.trim());
+    if(r.respAcc&&r.respAcc.trim())sets.respacc.add(r.respAcc.trim());
   });
   const toOpts=set=>[...set].sort((a,b)=>String(a).localeCompare(String(b))).map(v=>({v,l:v}));
   msOpts.empresa=toOpts(sets.empresa);
@@ -502,6 +507,8 @@ function poblarFiltros(data){
   msOpts.estacc=toOpts(sets.estacc);
   msOpts.crit=toOpts(sets.crit);
   msOpts.resp=toOpts(sets.resp);
+  msOpts.respcorr=toOpts(sets.respcorr);
+  msOpts.respacc=toOpts(sets.respacc);
   msOpts.venc=VENC_OPTS;
 
   Object.keys(msOpts).forEach(key=>{
@@ -537,6 +544,8 @@ function aplicarFiltros(){
     if(SEL.estacc.size>0&&!SEL.estacc.has(r.estAcc.trim()))return false;
     if(SEL.crit.size>0&&!SEL.crit.has(r.crit.trim()))return false;
     if(SEL.resp.size>0&&!SEL.resp.has(r.respDir))return false;
+    if(SEL.respcorr.size>0&&!SEL.respcorr.has(r.respCorr.trim()))return false;
+    if(SEL.respacc.size>0&&!SEL.respacc.has(r.respAcc.trim()))return false;
     // filtro de vencimiento
     if(SEL.venc.size>0){
       const d=parseDate(r.fImpl);
@@ -567,7 +576,7 @@ function aplicarFiltros(){
 function renderActiveTags(){
   const container=document.getElementById('active-tags');
   const tags=[];
-  const labelMap={empresa:'Empresa',un:'UN',depto:'Depto',tipo:'Tipo',origen:'Origen',estcorr:'Est.Correc.',estacc:'Est.Acción',crit:'Crit.',resp:'Resp.',venc:'Venc.'};
+  const labelMap={empresa:'Empresa',un:'UN',depto:'Depto',tipo:'Tipo',origen:'Origen',estcorr:'Est.Correc.',estacc:'Est.Acción',crit:'Crit.',resp:'Resp.Directo',venc:'Venc.',respcorr:'Resp.Correc.',respacc:'Resp.Acción'};
   Object.keys(SEL).forEach(key=>{
     if(SEL[key].size>0){
       const vals=[...SEL[key]].slice(0,2).join(', ')+(SEL[key].size>2?` +${SEL[key].size-2}`:'');
@@ -633,10 +642,14 @@ function renderCharts(data){
   const aC={'FINALIZADO':0,'EN CURSO':0,'PENDIENTE':0,'Sin estado':0};
   data.forEach(r=>{const k=r.estAcc.trim()||'Sin estado';aC[k]!==undefined?aC[k]++:aC['Sin estado']++;});
   mc('c-estacc','doughnut',Object.keys(aC),Object.values(aC),['#1D9E75','#EF9F27','#E24B4A','#888780']);
-  // 3. Estado Cierre Hallazgo (Col BL)
+  // 2. Estado Cierre Hallazgo (Col BL)
   const cC={'CERRADO':0,'PENDIENTE':0};
   data.forEach(r=>{const k=r.estCierre||'PENDIENTE';cC[k]!==undefined?cC[k]++:(cC['PENDIENTE']++);});
   mc('c-estcierre','doughnut',Object.keys(cC),Object.values(cC),['#1D9E75','#E24B4A']);
+  // 4. Verificación de eficacia
+  const vC={};
+  data.forEach(r=>{const k=r.estVerif&&r.estVerif.trim()?r.estVerif.trim():'Sin verificar';vC[k]=(vC[k]||0)+1;});
+  mc('c-estverif','doughnut',Object.keys(vC),Object.values(vC),['#1D9E75','#EF9F27','#E24B4A','#888780','#534AB7']);
   const empTop=cntTop(data,'empresa',10);
   mc('c-empresa','bar',empTop.map(x=>x[0]),empTop.map(x=>x[1]),['#534AB7','#1D9E75','#EF9F27','#E24B4A','#378ADD']);
   const hoy=new Date();
@@ -676,7 +689,7 @@ function renderResponsables(data){
         const cls=dias<0?'verr':dias<=7?'vwarn':'vok';
         vtoHtml=`<span class="${cls}">${dias>=0?'+'+dias+'d':dias+'d'}</span>`;
       }
-      const id=r.nHall||('#'+r.serialNumber)||'—';
+      const id=r.nHall||'—';
       const accion=r.accionDesc||r.correccion||'Sin acción registrada';
       return`<div class="resp-hall-item">
         <div>
@@ -695,12 +708,13 @@ function renderResponsables(data){
         <div class="rhall-status">
           <div style="font-size:9px;color:var(--text3);margin-bottom:2px">1. Corrección</div>
           ${pillEstado(r.estCorr)}
-          <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">2. Acción correctiva</div>
-          ${pillEstado(r.estAcc)}
-          <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">3. Cierre hallazgo</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">2. Cierre hallazgo</div>
           ${pillCierre(r.estCierre)}
+          <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">3. Acción correctiva</div>
+          ${pillEstado(r.estAcc)}
+          <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">4. Verif. eficacia</div>
+          <div style="font-size:10px;color:var(--text2)">${r.estVerif||'—'}</div>
           <div class="rhall-vto" style="margin-top:5px">${vtoHtml}</div>
-          ${r.estVerif?`<div style="margin-top:4px;font-size:10px;color:var(--text3)">${r.estVerif}</div>`:''}
         </div>
       </div>`;
     }).join('');
@@ -757,10 +771,10 @@ function renderTabla(data){
     let dTxt='—';
     if(abierto&&dias!==null){const cls=dias<0?'verr':dias<=7?'vwarn':'vok';dTxt=`<span class="${cls}">${dias>=0?'+'+dias+'d':dias+'d'}</span>`;}
     const vencBadge=abierto&&dias!==null&&dias<0?' <span class="pill p-pen" style="font-size:9px">VEN</span>':'';
-    const id=r.nHall||('#'+r.serialNumber)||'—';
+    const id=r.nHall||'—';
     const sd=r.desc.length>65?r.desc.substring(0,65)+'…':r.desc;
     const rn=r.respDir.split(' ').slice(0,2).join(' ');
-    return`<tr><td><strong>${id}</strong></td><td style="white-space:nowrap">${fmtDate(r.fechaAud)}</td><td style="font-size:10px">${r.empresa||'—'}</td><td style="font-size:10px">${r.depto||'—'}</td><td>${pillTipo(r.tipoHallazgo)}</td><td title="${r.desc.replace(/"/g,"'").replace(/\n/g,' ')}" style="max-width:240px">${sd}</td><td style="font-size:10px">${rn||'—'}</td><td style="white-space:nowrap">${fmtDate(r.fMaxCorr)}${vencBadge}</td><td>${pillEstado(r.estCorr)}</td><td style="white-space:nowrap">${fmtDate(r.fImpl)}</td><td>${pillEstado(r.estAcc)}</td><td>${pillCierre(r.estCierre)}</td><td style="font-size:10px">${r.estVerif||'—'}</td><td style="text-align:center">${dTxt}</td></tr>`;
+    return`<tr><td><strong>${id}</strong></td><td style="white-space:nowrap">${fmtDate(r.fechaAud)}</td><td style="font-size:10px">${r.empresa||'—'}</td><td style="font-size:10px">${r.depto||'—'}</td><td>${pillTipo(r.tipoHallazgo)}</td><td title="${r.desc.replace(/"/g,"'").replace(/\n/g,' ')}" style="max-width:240px">${sd}</td><td style="font-size:10px">${rn||'—'}</td><td style="white-space:nowrap">${fmtDate(r.fMaxCorr)}${vencBadge}</td><td>${pillEstado(r.estCorr)}</td><td>${pillCierre(r.estCierre)}</td><td style="white-space:nowrap">${fmtDate(r.fImpl)}</td><td>${pillEstado(r.estAcc)}</td><td style="font-size:10px">${r.estVerif||'—'}</td><td style="text-align:center">${dTxt}</td></tr>`;
   }).join('');
   document.getElementById('tbody-main').innerHTML=rows||'<tr><td colspan="14" class="empty">Sin resultados para los filtros seleccionados</td></tr>';
 }
@@ -770,7 +784,7 @@ function exportarExcel(){
   const hoy=new Date();
   const filas=filtrados.map(r=>{
     const dias=diasR(r.fImpl);
-    return{'N° Hallazgo':r.nHall||('#'+r.serialNumber),'Fecha Auditoría':fmtDate(r.fechaAud),'Empresa':r.empresa,'Unidad de Negocio':r.unNegocio,'Sector':r.sector,'Departamento':r.depto,'Tipo Hallazgo':r.tipoHallazgo,'Origen':r.origen,'Impacto':r.impacto,'Responsable Proceso':r.respProceso,'Responsable Directo':r.respDir,'Criticidad':r.crit,'Descripción':r.desc,'Corrección':r.correccion,'F. Máx. Corrección':fmtDate(r.fMaxCorr),'Estado Corrección':r.estCorr,'Causa Raíz':r.causaRaiz,'Acción Correctiva':r.accionDesc,'Resp. Acción':r.respAcc,'F. Impl. Acción':fmtDate(r.fImpl),'Estado Acción':r.estAcc,'Fecha Cierre':fmtDate(r.fCierre),'Estado Verificación':r.estVerif,'Obs. Verificación':r.obsVerif,'Días Restantes':r.estAcc.trim()==='FINALIZADO'?'Cerrado':dias===null?'Sin fecha':dias,'Alerta':r.estAcc.trim()!=='FINALIZADO'&&dias!==null&&dias<0?'VENCIDO':r.estAcc.trim()!=='FINALIZADO'&&dias!==null&&dias<=7?'PRÓXIMO':''};
+    return{'N° Hallazgo':r.nHall||'—','Fecha Auditoría':fmtDate(r.fechaAud),'Empresa':r.empresa,'Unidad de Negocio':r.unNegocio,'Sector':r.sector,'Departamento':r.depto,'Tipo Hallazgo':r.tipoHallazgo,'Origen':r.origen,'Impacto':r.impacto,'Responsable Proceso':r.respProceso,'Responsable Directo':r.respDir,'Criticidad':r.crit,'Descripción':r.desc,'Corrección':r.correccion,'F. Máx. Corrección':fmtDate(r.fMaxCorr),'Estado Corrección':r.estCorr,'Causa Raíz':r.causaRaiz,'Acción Correctiva':r.accionDesc,'Resp. Acción':r.respAcc,'F. Impl. Acción':fmtDate(r.fImpl),'Estado Acción':r.estAcc,'Fecha Cierre':fmtDate(r.fCierre),'Estado Verificación':r.estVerif,'Obs. Verificación':r.obsVerif,'Días Restantes':r.estAcc.trim()==='FINALIZADO'?'Cerrado':dias===null?'Sin fecha':dias,'Alerta':r.estAcc.trim()!=='FINALIZADO'&&dias!==null&&dias<0?'VENCIDO':r.estAcc.trim()!=='FINALIZADO'&&dias!==null&&dias<=7?'PRÓXIMO':''};
   });
   const ws=XLSX.utils.json_to_sheet(filas);
   ws['!cols']=Array(26).fill({wch:20});
@@ -793,7 +807,7 @@ function exportarPDF(){
     const vto=!ab?'✓':dias===null?'—':dias<0?`⚠${dias}d`:dias<=7?`⚡+${dias}d`:`+${dias}d`;
     const vc=!ab?'#0F6E56':dias!==null&&dias<0?'#A32D2D':dias!==null&&dias<=7?'#854F0B':'#0F6E56';
     const bg=r.estCorr.trim()==='FINALIZADO'?'#f0faf6':r.estCorr.trim()==='EN CURSO'?'#fffbf0':'#fff5f5';
-    const id=r.nHall||('#'+r.serialNumber)||'—';
+    const id=r.nHall||'—';
     return`<tr style="background:${bg}"><td style="padding:4px 7px;border-bottom:1px solid #eee;font-weight:700;font-size:11px">${id}</td><td style="padding:4px 7px;border-bottom:1px solid #eee;font-size:10px">${fmtDate(r.fechaAud)}</td><td style="padding:4px 7px;border-bottom:1px solid #eee;font-size:10px">${r.empresa}</td><td style="padding:4px 7px;border-bottom:1px solid #eee;font-size:10px">${r.depto}</td><td style="padding:4px 7px;border-bottom:1px solid #eee;font-size:10px">${r.tipoHallazgo}</td><td style="padding:4px 7px;border-bottom:1px solid #eee;font-size:10px">${r.desc.length>70?r.desc.substring(0,70)+'…':r.desc}</td><td style="padding:4px 7px;border-bottom:1px solid #eee;font-size:10px">${r.respDir.split(' ').slice(0,2).join(' ')}</td><td style="padding:4px 7px;border-bottom:1px solid #eee;text-align:center;font-size:10px">${r.estCorr||'—'}</td><td style="padding:4px 7px;border-bottom:1px solid #eee;text-align:center;font-size:10px">${r.estAcc||'—'}</td><td style="padding:4px 7px;border-bottom:1px solid #eee;text-align:center;font-size:10px;color:${vc};font-weight:700">${vto}</td></tr>`;
   }).join('');
   const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Hallazgos SGI</title><style>body{font-family:Arial,sans-serif;font-size:12px;color:#222;margin:20px}.lb{background:#111;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;margin-right:8px}h1{font-size:16px;margin:5px 0 2px}.meta{font-size:11px;color:#666;margin-bottom:14px}.kpis{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}.kpi{background:#f5f5f3;padding:8px 15px;border-radius:6px;text-align:center}.kpi .v{font-size:22px;font-weight:700}.kpi .l{font-size:10px;color:#666}.ok{color:#0F6E56}.warn{color:#854F0B}.danger{color:#A32D2D}table{width:100%;border-collapse:collapse}th{background:#1a1a18;color:#fff;padding:6px 7px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.3px}.footer{margin-top:14px;font-size:10px;color:#999;text-align:right;border-top:1px solid #eee;padding-top:8px}@media print{button{display:none}}</style></head><body><div><span class="lb">GRIFFOULIERE</span><span style="font-size:11px;color:#666">SGI</span></div><h1>Tablero de Hallazgos SGI</h1><div class="meta">Generado: ${fecha} · ${total} registros</div><div class="kpis"><div class="kpi"><div class="v">${total}</div><div class="l">Total</div></div><div class="kpi"><div class="v ok">${fin}</div><div class="l">Finalizados</div></div><div class="kpi"><div class="v warn">${cur}</div><div class="l">En curso</div></div><div class="kpi"><div class="v danger">${pen}</div><div class="l">Pendientes</div></div><div class="kpi"><div class="v danger">${venc}</div><div class="l">Vencidos</div></div><div class="kpi"><div class="v">${av}%</div><div class="l">Avance</div></div></div><table><thead><tr><th>N° Hall.</th><th>Fecha</th><th>Empresa</th><th>Depto.</th><th>Tipo</th><th>Descripción</th><th>Responsable</th><th>Est.Correc.</th><th>Est.Acción</th><th>Vto.</th></tr></thead><tbody>${filas}</tbody></table><div class="footer">Griffouliere S.A. · SGI · ${fecha} · Confidencial</div></body></html>`;
@@ -804,12 +818,12 @@ function exportarPDF(){
 
 // ─── NORMALIZACIÓN ESTADO CIERRE (Col. BL) ───────────────────────────────
 function normCierre(v){
-  if(!v)return'PENDIENTE';
+  if(!v||v.trim()===''||v.trim()==='#N/A'||v.trim()==='N/A')return'PENDIENTE';
   const t=v.trim().toUpperCase();
-  if(t==='#N/A'||t===''||t==='N/A')return'PENDIENTE';
-  if(t.includes('CERR')||t.includes('FINALIZ')||t.includes('CLOSE'))return'CERRADO';
-  if(t.includes('PEND'))return'PENDIENTE';
-  return v.trim();
+  if(t==='CERRADO')return'CERRADO';
+  if(t==='PENDIENTE')return'PENDIENTE';
+  // cualquier otro valor desconocido → PENDIENTE
+  return'PENDIENTE';
 }
 
 // ─── NORMALIZACIÓN TIPO HALLAZGO ─────────────────────────────────────────
@@ -837,7 +851,7 @@ function mapRow(r){
     impacto:r['Impacto']||'',
     respProceso:r['Responsable Proceso - APELLIDOYNOMBRE']||'',
     respDir:r['Responsable Directo - APELLIDOYNOMBRE']||'',
-    nHall:r['N° HALLAZGO']||'',
+    nHall:r['Código único']||r['N° HALLAZGO']||'',
     desc:r['Descripción del hallazgo']||'',
     correccion:r['Corrección  (la corrección elimina el desvío)']||r['Corrección']||'',
     respCorr:r['Resp. Implementación - APELLIDO']||'',
@@ -853,7 +867,7 @@ function mapRow(r){
     obsCierre:r['Observaciones -cierre']||'',
     estVerif:r['Estado de la verificacion']||'',
     obsVerif:r['verificación eficacia / Observaciones']||'',
-    estCierre:normCierre(r['ESTADO DE INFORME FINAL']||r['CIERRE PROCESO']||''),
+    estCierre:normCierre(r['CIERRE PROCESO']||''),
   };
 }
 
