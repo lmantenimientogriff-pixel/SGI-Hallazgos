@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- saved from url=(0067)file:///C:/Users/Coco/Downloads/tablero_sgi_griffouliere_v3_27.html -->
-<html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
+<html lang="es">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tablero SGI — Hallazgos Griffouliere</title>
-<link rel="stylesheet" href="./index_files/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css">
 <style>
 :root{
   --bg:#f7f7f5;--surface:#fff;--surface2:#f0efeb;--surface3:#e8e7e3;
@@ -271,11 +271,11 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="login-sub">Ingresá con tu usuario y contraseña</div>
     <div class="login-field">
       <label>Usuario</label>
-      <input type="text" id="login-user" placeholder="ej: ftoso" autocomplete="username" onkeydown="if(event.key===&#39;Enter&#39;)doLogin()">
+      <input type="text" id="login-user" placeholder="ej: ftoso" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <div class="login-field">
       <label>Contraseña</label>
-      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key===&#39;Enter&#39;)doLogin()">
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar</button>
     <div class="login-error" id="login-error"></div>
@@ -290,7 +290,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div style="margin-bottom:4px"><span class="logo-badge">GRIFFOULIERE</span><span style="font-size:11px;color:var(--text3)">Sistema de Gestión Integrado</span></div>
       <h1>Tablero de Hallazgos SGI</h1>
       <div class="sub" id="subtitle">Cargando...</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">12</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">13</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
     </div>
     <div class="hactions">
       <button onclick="recargar()"><i class="ti ti-refresh"></i> Actualizar</button>
@@ -306,7 +306,7 @@ tbody tr:hover td{background:var(--surface2)}
   </div>
 
   <div class="url-row">
-    <input type="text" id="api-url" value="https://script.google.com/macros/s/AKfycbxoojsS0E6sk2ZspimOeHvGOGiiLxylyALfYa5ax1ytTtK_d2nUbI-hY6baeRisvO3x/exec">
+    <input type="text" id="api-url" value="https://script.google.com/macros/s/AKfycbxoojsS0E6sk2ZspimOeHvGOGiiLxylyALfYa5ax1ytTtK_d2nUbI-hY6baeRisvO3x/exec"/>
     <button class="primary" onclick="recargar()"><i class="ti ti-cloud-download"></i> Cargar datos</button>
   </div>
 
@@ -364,11 +364,11 @@ tbody tr:hover td{background:var(--surface2)}
 
   <!-- TABS -->
   <div class="tabs">
-    <div class="tab active" onclick="switchTab(&#39;graficos&#39;,this)"><i class="ti ti-chart-bar" style="font-size:12px"></i> Gráficos</div>
-    <div class="tab" onclick="switchTab(&#39;responsables&#39;,this)"><i class="ti ti-users" style="font-size:12px"></i> Responsables</div>
-    <div class="tab" onclick="switchTab(&#39;detalle&#39;,this)"><i class="ti ti-table" style="font-size:12px"></i> Detalle</div>
-    <div class="tab" id="tab-log-btn" onclick="switchTab(&#39;log&#39;,this)" style="display:none"><i class="ti ti-history" style="font-size:12px"></i> Log de cambios</div>
-    <div class="tab" id="tab-usr-btn" onclick="switchTab(&#39;usuarios&#39;,this)" style="display:none"><i class="ti ti-users" style="font-size:12px"></i> Usuarios</div>
+    <div class="tab active" onclick="switchTab('graficos',this)"><i class="ti ti-chart-bar" style="font-size:12px"></i> Gráficos</div>
+    <div class="tab" onclick="switchTab('responsables',this)"><i class="ti ti-users" style="font-size:12px"></i> Responsables</div>
+    <div class="tab" onclick="switchTab('detalle',this)"><i class="ti ti-table" style="font-size:12px"></i> Detalle</div>
+    <div class="tab" id="tab-log-btn" onclick="switchTab('log',this)" style="display:none"><i class="ti ti-history" style="font-size:12px"></i> Log de cambios</div>
+    <div class="tab" id="tab-usr-btn" onclick="switchTab('usuarios',this)" style="display:none"><i class="ti ti-users" style="font-size:12px"></i> Usuarios</div>
   </div>
 
   <!-- TAB GRÁFICOS -->
@@ -403,21 +403,21 @@ tbody tr:hover td{background:var(--surface2)}
       <div class="twrap">
         <table>
           <thead><tr>
-            <th onclick="ordenar(&#39;serialNumber&#39;)"># <span id="s-serialNumber">↕</span></th>
-            <th onclick="ordenar(&#39;fechaAud&#39;)">Fecha <span id="s-fechaAud">↕</span></th>
-            <th onclick="ordenar(&#39;tipoHallazgo&#39;)">Tipo <span id="s-tipoHallazgo">↕</span></th>
-            <th onclick="ordenar(&#39;respDir&#39;)">Responsable <span id="s-respDir">↕</span></th>
+            <th onclick="ordenar('serialNumber')"># <span id="s-serialNumber">↕</span></th>
+            <th onclick="ordenar('fechaAud')">Fecha <span id="s-fechaAud">↕</span></th>
+            <th onclick="ordenar('tipoHallazgo')">Tipo <span id="s-tipoHallazgo">↕</span></th>
+            <th onclick="ordenar('respDir')">Responsable <span id="s-respDir">↕</span></th>
             <th>Descripción</th>
             <th>Acción correctiva</th>
-            <th onclick="ordenar(&#39;fMaxCorr&#39;)">F.Máx.Correc. <span id="s-fMaxCorr">↕</span></th>
+            <th onclick="ordenar('fMaxCorr')">F.Máx.Correc. <span id="s-fMaxCorr">↕</span></th>
             <th>F.Impl.Correc.</th>
-            <th onclick="ordenar(&#39;estCorr&#39;)">1. Corrección <span id="s-estCorr">↕</span></th>
-            <th onclick="ordenar(&#39;estCierre&#39;)">2. Cierre Hallazgo <span id="s-estCierre">↕</span></th>
+            <th onclick="ordenar('estCorr')">1. Corrección <span id="s-estCorr">↕</span></th>
+            <th onclick="ordenar('estCierre')">2. Cierre Hallazgo <span id="s-estCierre">↕</span></th>
             <th>F.Impl.Acción</th>
-            <th onclick="ordenar(&#39;estAcc&#39;)">3. Acción Correctiva <span id="s-estAcc">↕</span></th>
-            <th onclick="ordenar(&#39;estVerif&#39;)">4. Verif.Eficacia <span id="s-estVerif">↕</span></th>
+            <th onclick="ordenar('estAcc')">3. Acción Correctiva <span id="s-estAcc">↕</span></th>
+            <th onclick="ordenar('estVerif')">4. Verif.Eficacia <span id="s-estVerif">↕</span></th>
             <th>Obs.Verif.</th>
-            <th onclick="ordenar(&#39;dias&#39;)">Vto. <span id="s-dias">↕</span></th>
+            <th onclick="ordenar('dias')">Vto. <span id="s-dias">↕</span></th>
           </tr></thead>
           <tbody id="tbody-main"><tr><td colspan="15" class="empty">Cargando datos...</td></tr></tbody>
         </table>
@@ -445,9 +445,9 @@ tbody tr:hover td{background:var(--surface2)}
 <div class="estado-popup" id="estado-popup">
   <div class="estado-popup-title" id="popup-title">Cambiar estado</div>
   <div id="popup-opts">
-    <div class="estado-opt" onclick="setEstado(&#39;FINALIZADO&#39;)"><span class="dot" style="background:#1D9E75"></span>Finalizado</div>
-    <div class="estado-opt" onclick="setEstado(&#39;EN CURSO&#39;)"><span class="dot" style="background:#EF9F27"></span>En curso</div>
-    <div class="estado-opt" onclick="setEstado(&#39;PENDIENTE&#39;)"><span class="dot" style="background:#E24B4A"></span>Pendiente</div>
+    <div class="estado-opt" onclick="setEstado('FINALIZADO')"><span class="dot" style="background:#1D9E75"></span>Finalizado</div>
+    <div class="estado-opt" onclick="setEstado('EN CURSO')"><span class="dot" style="background:#EF9F27"></span>En curso</div>
+    <div class="estado-opt" onclick="setEstado('PENDIENTE')"><span class="dot" style="background:#E24B4A"></span>Pendiente</div>
   </div>
 </div>
 
@@ -489,8 +489,8 @@ tbody tr:hover td{background:var(--surface2)}
 <div class="footer">Griffouliere S.A. · SGI · Datos en tiempo real desde Google Sheets</div>
 </div>
 
-<script src="./index_files/chart.umd.js.descarga"></script>
-<script src="./index_files/xlsx.full.min.js.descarga"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 
 const USUARIOS = [
@@ -659,6 +659,7 @@ async function saveField(rowId, campo, valor) {
     fetch(API_URL(), {
       method: 'POST',
       mode: 'no-cors',
+      headers: {'Content-Type': 'text/plain'},
       body: JSON.stringify({serialNumber, campo, valor}),
     });
     toast('✓ Guardado');
@@ -1189,6 +1190,7 @@ async function setEstado(nuevoValor) {
     fetch(API_URL(), {
       method: 'POST',
       mode: 'no-cors',
+      headers: {'Content-Type': 'text/plain'},
       body: JSON.stringify({serialNumber, campo, valor: nuevoValor}),
     });
     toast('✓ Guardado en Sheet');
@@ -1389,6 +1391,7 @@ async function registrarLog(serialNumber, nHall, campo, valorAnterior, valorNuev
     fetch(API_URL(), {
       method:'POST',
       mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({action:'log', ...entry})
     });
   } catch(err) { console.warn('Log no persistido:', err); }
@@ -1535,6 +1538,7 @@ async function guardarUsuario(){
     await fetch(API_URL(),{
       method:'POST',
       mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({action:'saveUsuario', nombre, usuario, password:pass, rol, empresa, obs})
     });
     toast('Usuario guardado ✓');
@@ -1566,6 +1570,7 @@ async function eliminarUsuario(login){
     await fetch(API_URL(),{
       method:'POST',
       mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({action:'deleteUsuario', usuario:login})
     });
     toast('Usuario eliminado ✓');
@@ -1592,42 +1597,45 @@ document.addEventListener('click', e=>{
 
 // ─── INICIALIZACIÓN ──────────────────────────────────────────────────────
 async function inicializar(){
-  // Intentar cargar usuarios desde el Sheet
+  const setLoginSub = txt => { const el=document.getElementById('login-sub'); if(el) el.textContent=txt; };
+  const showForm = () => {
+    const f=document.getElementById('login-form'); if(f) f.style.display='block';
+    const u=document.getElementById('login-user'); if(u) u.focus();
+  };
   try {
     const res = await fetch(API_URL()+'?action=getUsuarios');
     const data = await res.json();
     if(Array.isArray(data) && data.length > 0){
-      // Reemplazar array hardcodeado con datos del Sheet
       USUARIOS.length = 0;
       data.forEach(r => {
+        if(!r['Usuario (login)']) return;
         USUARIOS.push({
-          u: r['Usuario (login)']||'',
-          p: r['Contraseña']||'',
-          nombre: r['Nombre completo']||'',
-          rol: (r['Rol']||'lectura').toLowerCase(),
-          empresa: r['Empresa']||'',
-          obs: r['Obs.']||''
+          u: String(r['Usuario (login)']).trim(),
+          p: String(r['Contraseña']||'').trim(),
+          nombre: String(r['Nombre completo']||'').trim(),
+          rol: String(r['Rol']||'lectura').toLowerCase().trim(),
+          empresa: String(r['Empresa']||'').trim(),
+          obs: String(r['Obs.']||'').trim()
         });
       });
       USUARIOS_SHEET = [...USUARIOS];
-      document.getElementById('login-sub').textContent = 'Ingresá con tu usuario y contraseña';
-    } else {
-      document.getElementById('login-sub').textContent = 'Ingresá con tu usuario y contraseña';
+      console.log('Usuarios cargados del Sheet:', USUARIOS.length);
     }
   } catch(err) {
     console.warn('Usando usuarios locales:', err);
-    document.getElementById('login-sub').textContent = 'Ingresá con tu usuario y contraseña';
   }
-  // Mostrar formulario de login
-  document.getElementById('login-form').style.display = 'block';
-  document.getElementById('login-user').focus();
+  setLoginSub('Ingresá con tu usuario y contraseña');
+  showForm();
 }
 
-// Iniciar al cargar
-inicializar();
+// Iniciar al cargar cuando el DOM esté listo
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', inicializar);
+} else {
+  inicializar();
+}
 
 // recargar() se llama desde doLogin()
 </script>
-
-
-</body></html>
+</body>
+</html>
