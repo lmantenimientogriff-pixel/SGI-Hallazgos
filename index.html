@@ -267,10 +267,11 @@ tbody tr:hover td{background:var(--surface2)}
   <!-- TAB GRÁFICOS -->
   <div class="tcontent active" id="tab-graficos">
     <div class="charts">
-      <div class="chart-card"><div class="ct">Estado de correcciones</div><div style="position:relative;height:200px"><canvas id="c-estcorr" role="img" aria-label="Estado correcciones"></canvas></div></div>
+      <div class="chart-card"><div class="ct">1. Estado de correcciones (Col. U)</div><div style="position:relative;height:200px"><canvas id="c-estcorr" role="img" aria-label="Estado correcciones"></canvas></div></div>
       <div class="chart-card"><div class="ct">Hallazgos por departamento (top 8)</div><div style="position:relative;height:200px"><canvas id="c-depto" role="img" aria-label="Por departamento"></canvas></div></div>
       <div class="chart-card"><div class="ct">Tipo de hallazgo</div><div style="position:relative;height:200px"><canvas id="c-tipo" role="img" aria-label="Tipo hallazgo"></canvas></div></div>
-      <div class="chart-card"><div class="ct">Estado de acciones correctivas</div><div style="position:relative;height:200px"><canvas id="c-estacc" role="img" aria-label="Estado acciones"></canvas></div></div>
+      <div class="chart-card"><div class="ct">2. Estado acciones correctivas (Col. AC)</div><div style="position:relative;height:200px"><canvas id="c-estacc" role="img" aria-label="Estado acciones"></canvas></div></div>
+      <div class="chart-card"><div class="ct">3. Estado cierre hallazgo (Col. BL)</div><div style="position:relative;height:200px"><canvas id="c-estcierre" role="img" aria-label="Estado cierre hallazgo"></canvas></div></div>
       <div class="chart-card"><div class="ct">Hallazgos por empresa</div><div style="position:relative;height:200px"><canvas id="c-empresa" role="img" aria-label="Por empresa"></canvas></div></div>
       <div class="chart-card"><div class="ct">Vencimiento de acciones abiertas</div><div style="position:relative;height:200px"><canvas id="c-venc" role="img" aria-label="Vencimiento"></canvas></div></div>
     </div>
@@ -302,13 +303,14 @@ tbody tr:hover td{background:var(--surface2)}
             <th>Descripción</th>
             <th onclick="ordenar('respDir')">Responsable <span id="s-respDir">↕</span></th>
             <th onclick="ordenar('fMaxCorr')">F.Máx.Correc. <span id="s-fMaxCorr">↕</span></th>
-            <th onclick="ordenar('estCorr')">Est.Correc. <span id="s-estCorr">↕</span></th>
+            <th onclick="ordenar('estCorr')">1. Corrección <span id="s-estCorr">↕</span></th>
             <th onclick="ordenar('fImpl')">F.Impl.Acción <span id="s-fImpl">↕</span></th>
-            <th onclick="ordenar('estAcc')">Est.Acción <span id="s-estAcc">↕</span></th>
+            <th onclick="ordenar('estAcc')">2. Acción Correctiva <span id="s-estAcc">↕</span></th>
+            <th onclick="ordenar('estCierre')">3. Cierre Hallazgo <span id="s-estCierre">↕</span></th>
             <th onclick="ordenar('estVerif')">Verif.Eficacia <span id="s-estVerif">↕</span></th>
             <th onclick="ordenar('dias')">Vto. <span id="s-dias">↕</span></th>
           </tr></thead>
-          <tbody id="tbody-main"><tr><td colspan="13" class="empty">Cargando datos...</td></tr></tbody>
+          <tbody id="tbody-main"><tr><td colspan="14" class="empty">Cargando datos...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -369,6 +371,12 @@ function pillEstado(e){
   if(t==='EN CURSO')return`<span class="pill p-cur">En curso</span>`;
   if(t==='PENDIENTE')return`<span class="pill p-pen">Pendiente</span>`;
   return`<span class="pill p-obs">${e.substring(0,15)}</span>`;
+}
+function pillCierre(e){
+  if(!e||e.trim()==='')return'<span class="pill p-pen">Pendiente</span>';
+  const t=e.trim().toUpperCase();
+  if(t==='CERRADO')return'<span class="pill p-fin">Cerrado</span>';
+  return'<span class="pill p-pen">Pendiente</span>';
 }
 function pillTipo(t){
   if(!t)return'—';
@@ -613,6 +621,7 @@ function cntTop(data,key,n=8){
   return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,n);
 }
 function renderCharts(data){
+  // 1. Estado Corrección (Col U)
   const eC={'FINALIZADO':0,'EN CURSO':0,'PENDIENTE':0,'Sin estado':0};
   data.forEach(r=>{const k=r.estCorr.trim()||'Sin estado';eC[k]!==undefined?eC[k]++:eC['Sin estado']++;});
   mc('c-estcorr','doughnut',Object.keys(eC),Object.values(eC),['#1D9E75','#EF9F27','#E24B4A','#888780']);
@@ -620,9 +629,14 @@ function renderCharts(data){
   mc('c-depto','bar',dTop.map(x=>x[0]),dTop.map(x=>x[1]),['#378ADD']);
   const tC={};data.forEach(r=>{const v=r.tipoHallazgo||'Sin tipo';tC[v]=(tC[v]||0)+1;});
   mc('c-tipo','doughnut',Object.keys(tC),Object.values(tC),['#E24B4A','#378ADD','#888780','#1D9E75','#EF9F27']);
+  // 2. Estado Acción Correctiva (Col AC)
   const aC={'FINALIZADO':0,'EN CURSO':0,'PENDIENTE':0,'Sin estado':0};
   data.forEach(r=>{const k=r.estAcc.trim()||'Sin estado';aC[k]!==undefined?aC[k]++:aC['Sin estado']++;});
   mc('c-estacc','doughnut',Object.keys(aC),Object.values(aC),['#1D9E75','#EF9F27','#E24B4A','#888780']);
+  // 3. Estado Cierre Hallazgo (Col BL)
+  const cC={'CERRADO':0,'PENDIENTE':0};
+  data.forEach(r=>{const k=r.estCierre||'PENDIENTE';cC[k]!==undefined?cC[k]++:(cC['PENDIENTE']++);});
+  mc('c-estcierre','doughnut',Object.keys(cC),Object.values(cC),['#1D9E75','#E24B4A']);
   const empTop=cntTop(data,'empresa',10);
   mc('c-empresa','bar',empTop.map(x=>x[0]),empTop.map(x=>x[1]),['#534AB7','#1D9E75','#EF9F27','#E24B4A','#378ADD']);
   const hoy=new Date();
@@ -679,9 +693,13 @@ function renderResponsables(data){
           </div>
         </div>
         <div class="rhall-status">
+          <div style="font-size:9px;color:var(--text3);margin-bottom:2px">1. Corrección</div>
           ${pillEstado(r.estCorr)}
-          <div style="margin-top:4px">${pillEstado(r.estAcc)}</div>
-          <div class="rhall-vto" style="margin-top:4px">${vtoHtml}</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">2. Acción correctiva</div>
+          ${pillEstado(r.estAcc)}
+          <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">3. Cierre hallazgo</div>
+          ${pillCierre(r.estCierre)}
+          <div class="rhall-vto" style="margin-top:5px">${vtoHtml}</div>
           ${r.estVerif?`<div style="margin-top:4px;font-size:10px;color:var(--text3)">${r.estVerif}</div>`:''}
         </div>
       </div>`;
@@ -742,9 +760,9 @@ function renderTabla(data){
     const id=r.nHall||('#'+r.serialNumber)||'—';
     const sd=r.desc.length>65?r.desc.substring(0,65)+'…':r.desc;
     const rn=r.respDir.split(' ').slice(0,2).join(' ');
-    return`<tr><td><strong>${id}</strong></td><td style="white-space:nowrap">${fmtDate(r.fechaAud)}</td><td style="font-size:10px">${r.empresa||'—'}</td><td style="font-size:10px">${r.depto||'—'}</td><td>${pillTipo(r.tipoHallazgo)}</td><td title="${r.desc.replace(/"/g,"'").replace(/\n/g,' ')}" style="max-width:240px">${sd}</td><td style="font-size:10px">${rn||'—'}</td><td style="white-space:nowrap">${fmtDate(r.fMaxCorr)}${vencBadge}</td><td>${pillEstado(r.estCorr)}</td><td style="white-space:nowrap">${fmtDate(r.fImpl)}</td><td>${pillEstado(r.estAcc)}</td><td style="font-size:10px">${r.estVerif||'—'}</td><td style="text-align:center">${dTxt}</td></tr>`;
+    return`<tr><td><strong>${id}</strong></td><td style="white-space:nowrap">${fmtDate(r.fechaAud)}</td><td style="font-size:10px">${r.empresa||'—'}</td><td style="font-size:10px">${r.depto||'—'}</td><td>${pillTipo(r.tipoHallazgo)}</td><td title="${r.desc.replace(/"/g,"'").replace(/\n/g,' ')}" style="max-width:240px">${sd}</td><td style="font-size:10px">${rn||'—'}</td><td style="white-space:nowrap">${fmtDate(r.fMaxCorr)}${vencBadge}</td><td>${pillEstado(r.estCorr)}</td><td style="white-space:nowrap">${fmtDate(r.fImpl)}</td><td>${pillEstado(r.estAcc)}</td><td>${pillCierre(r.estCierre)}</td><td style="font-size:10px">${r.estVerif||'—'}</td><td style="text-align:center">${dTxt}</td></tr>`;
   }).join('');
-  document.getElementById('tbody-main').innerHTML=rows||'<tr><td colspan="13" class="empty">Sin resultados para los filtros seleccionados</td></tr>';
+  document.getElementById('tbody-main').innerHTML=rows||'<tr><td colspan="14" class="empty">Sin resultados para los filtros seleccionados</td></tr>';
 }
 
 // ─── EXPORTAR ─────────────────────────────────────────────────────────────
@@ -784,6 +802,26 @@ function exportarPDF(){
   toast('PDF listo ✓');
 }
 
+// ─── NORMALIZACIÓN ESTADO CIERRE (Col. BL) ───────────────────────────────
+function normCierre(v){
+  if(!v)return'PENDIENTE';
+  const t=v.trim().toUpperCase();
+  if(t==='#N/A'||t===''||t==='N/A')return'PENDIENTE';
+  if(t.includes('CERR')||t.includes('FINALIZ')||t.includes('CLOSE'))return'CERRADO';
+  if(t.includes('PEND'))return'PENDIENTE';
+  return v.trim();
+}
+
+// ─── NORMALIZACIÓN TIPO HALLAZGO ─────────────────────────────────────────
+function normTipo(v){
+  if(!v)return'';
+  const t=v.trim().toLowerCase();
+  if(t.includes('no conform'))return'No Conformidad';
+  if(t.includes('oportunidad'))return'Oportunidad de Mejora';
+  if(t.includes('observ'))return'Observación';
+  return v.trim().replace(/\w\S*/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());
+}
+
 // ─── MAPEO JSON → OBJETO ──────────────────────────────────────────────────
 function mapRow(r){
   return{
@@ -793,7 +831,7 @@ function mapRow(r){
     unNegocio:r['Unidad de negocio - unidadDeNegocio']||'',
     sector:r['Sector']||'',
     depto:r['Departamento']||'',
-    tipoHallazgo:r['Tipo hallazgo']||'',
+    tipoHallazgo:normTipo(r['Tipo hallazgo']||''),
     origen:r['Origen']||'',
     subOrigen:r['Sub Origen']||'',
     impacto:r['Impacto']||'',
@@ -815,6 +853,7 @@ function mapRow(r){
     obsCierre:r['Observaciones -cierre']||'',
     estVerif:r['Estado de la verificacion']||'',
     obsVerif:r['verificación eficacia / Observaciones']||'',
+    estCierre:normCierre(r['ESTADO DE INFORME FINAL']||r['CIERRE PROCESO']||''),
   };
 }
 
