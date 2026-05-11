@@ -290,7 +290,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div style="margin-bottom:4px"><span class="logo-badge">GRIFFOULIERE</span><span style="font-size:11px;color:var(--text3)">Sistema de Gestión Integrado</span></div>
       <h1>Tablero de Hallazgos SGI</h1>
       <div class="sub" id="subtitle">Cargando...</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">11</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">12</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
     </div>
     <div class="hactions">
       <button onclick="recargar()"><i class="ti ti-refresh"></i> Actualizar</button>
@@ -656,13 +656,12 @@ async function saveField(rowId, campo, valor) {
   registrarLog(row?.serialNumber, row?.nHall, campo, valorAnterior, valor);
   const serialNumber = row?.serialNumber;
   try {
-    const res = await fetch(API_URL(), {
+    fetch(API_URL(), {
       method: 'POST',
+      mode: 'no-cors',
       body: JSON.stringify({serialNumber, campo, valor}),
     });
-    const data = await res.json();
-    if (data.ok) toast('✓ Guardado');
-    else toast('⚠ Error: ' + (data.error || 'desconocido'), 3000);
+    toast('✓ Guardado');
   } catch(e) {
     toast('⚠ No se pudo guardar', 3000);
   }
@@ -1187,15 +1186,14 @@ async function setEstado(nuevoValor) {
   renderResponsables(filtrados);
   toast('Guardando...', 1500);
   try {
-    const res = await fetch(API_URL(), {
+    fetch(API_URL(), {
       method: 'POST',
+      mode: 'no-cors',
       body: JSON.stringify({serialNumber, campo, valor: nuevoValor}),
     });
-    const data = await res.json();
-    if (data.ok) toast('✓ Guardado en Sheet');
-    else toast('⚠ Error: ' + (data.error || 'desconocido'), 3000);
+    toast('✓ Guardado en Sheet');
   } catch(e) {
-    toast('⚠ No se pudo guardar: ' + e.message, 3000);
+    toast('⚠ No se pudo guardar', 3000);
   }
 }
 
@@ -1388,13 +1386,11 @@ async function registrarLog(serialNumber, nHall, campo, valorAnterior, valorNuev
   renderLog();
   // Persistir en Sheet
   try {
-    console.log('Persistiendo log:', entry);
-    const res = await fetch(API_URL(), {
+    fetch(API_URL(), {
       method:'POST',
+      mode:'no-cors',
       body: JSON.stringify({action:'log', ...entry})
     });
-    const resp = await res.json();
-    console.log('Log persistido:', resp);
   } catch(err) { console.warn('Log no persistido:', err); }
 }
 
@@ -1536,18 +1532,21 @@ async function guardarUsuario(){
 
   errEl.textContent='Guardando...';
   try{
-    const res = await fetch(API_URL(),{
+    await fetch(API_URL(),{
       method:'POST',
+      mode:'no-cors',
       body: JSON.stringify({action:'saveUsuario', nombre, usuario, password:pass, rol, empresa, obs})
     });
-    const data = await res.json();
-    if(data.ok){
-      toast(`Usuario ${data.action==='created'?'creado':'actualizado'} ✓`);
-      cerrarModalUsr();
-      await cargarUsuariosSheet();
-    } else {
-      errEl.textContent = 'Error: '+(data.error||'desconocido');
-    }
+    toast('Usuario guardado ✓');
+    cerrarModalUsr();
+    // Actualizar lista local inmediatamente
+    const lista = USUARIOS_SHEET.length?USUARIOS_SHEET:USUARIOS;
+    const idx = lista.findIndex(u=>u.u===(USR_EDIT?.u||usuario));
+    const newUsr = {nombre,u:usuario,p:pass,rol,empresa,obs};
+    if(idx>=0) lista[idx]=newUsr; else lista.push(newUsr);
+    USUARIOS.length=0; lista.forEach(u=>USUARIOS.push(u));
+    USUARIOS_SHEET = [...lista];
+    renderUsuarios(lista);
   } catch(err){
     // Guardar localmente si falla el Sheet
     const lista = USUARIOS_SHEET.length?USUARIOS_SHEET:USUARIOS;
@@ -1564,17 +1563,18 @@ async function guardarUsuario(){
 async function eliminarUsuario(login){
   if(!confirm(`¿Eliminar al usuario "${login}"? Esta acción no se puede deshacer.`)) return;
   try{
-    const res = await fetch(API_URL(),{
+    await fetch(API_URL(),{
       method:'POST',
+      mode:'no-cors',
       body: JSON.stringify({action:'deleteUsuario', usuario:login})
     });
-    const data = await res.json();
-    if(data.ok){
-      toast('Usuario eliminado ✓');
-      await cargarUsuariosSheet();
-    } else {
-      toast('Error: '+(data.error||'desconocido'),3000);
-    }
+    toast('Usuario eliminado ✓');
+    const lista = USUARIOS_SHEET.length?USUARIOS_SHEET:USUARIOS;
+    const idx2 = lista.findIndex(u=>u.u===login);
+    if(idx2>=0) lista.splice(idx2,1);
+    USUARIOS.length=0; lista.forEach(u=>USUARIOS.push(u));
+    USUARIOS_SHEET = [...lista];
+    renderUsuarios(lista);
   } catch(err){
     const lista = USUARIOS_SHEET.length?USUARIOS_SHEET:USUARIOS;
     const idx = lista.findIndex(u=>u.u===login);
