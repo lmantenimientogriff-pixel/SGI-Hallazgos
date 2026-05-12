@@ -290,7 +290,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div style="margin-bottom:4px"><span class="logo-badge">GRIFFOULIERE</span><span style="font-size:11px;color:var(--text3)">Sistema de Gestión Integrado</span></div>
       <h1>Tablero de Hallazgos SGI</h1>
       <div class="sub" id="subtitle">Cargando...</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">33</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">35</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
     </div>
     <div class="hactions">
       <button onclick="recargar()"><i class="ti ti-refresh"></i> Actualizar</button>
@@ -659,12 +659,13 @@ async function saveField(rowId, campo, valor) {
   registrarLog(row?.serialNumber, row?.nHall, campo, valorAnterior, valor);
   const serialNumber = row?.serialNumber;
   try {
-    fetch(API_URL(), {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {'Content-Type': 'text/plain'},
-      body: JSON.stringify({serialNumber, campo, valor}),
+    const p = new URLSearchParams({
+      action: 'update',
+      codigoUnico: row?.codigoUnico||'',
+      serialNumber: String(serialNumber),
+      campo, valor
     });
+    fetch(API_URL() + '?' + p.toString());
     toast('✓ Guardado');
   } catch(e) {
     toast('⚠ No se pudo guardar', 3000);
@@ -1261,12 +1262,14 @@ async function setEstado(nuevoValor) {
   renderResponsables(filtrados);
   toast('Guardando...', 1500);
   try {
-    fetch(API_URL(), {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {'Content-Type': 'text/plain'},
-      body: JSON.stringify({serialNumber, campo, valor: nuevoValor}),
+    const rowE = rawData.find(r => r.rowId === rowId);
+    const p = new URLSearchParams({
+      action: 'update',
+      codigoUnico: rowE?.codigoUnico||'',
+      serialNumber: rowE?.serialNumber||'',
+      campo, valor: nuevoValor
     });
+    fetch(API_URL() + '?' + p.toString());
     toast('✓ Guardado en Sheet');
   } catch(e) {
     toast('⚠ No se pudo guardar', 3000);
@@ -1339,6 +1342,7 @@ function mapRow(r){
     respProceso:r['Responsable Proceso - APELLIDOYNOMBRE']||'',
     respDir:r['Responsable Directo - APELLIDOYNOMBRE']||'',
     nHall:r['Código único']||r['N° HALLAZGO']||'',
+    codigoUnico:r['Código único']||'',
     desc:r['Descripción del hallazgo']||'',
     correccion:r['Corrección  (la corrección elimina el desvío)']||r['Corrección']||'',
     respCorr:r['Resp. Implementación - APELLIDO']||'',
