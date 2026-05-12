@@ -290,7 +290,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div style="margin-bottom:4px"><span class="logo-badge">GRIFFOULIERE</span><span style="font-size:11px;color:var(--text3)">Sistema de Gestión Integrado</span></div>
       <h1>Tablero de Hallazgos SGI</h1>
       <div class="sub" id="subtitle">Cargando...</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">35</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">36</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
     </div>
     <div class="hactions">
       <button onclick="recargar()"><i class="ti ti-refresh"></i> Actualizar</button>
@@ -1269,6 +1269,8 @@ async function setEstado(nuevoValor) {
       serialNumber: rowE?.serialNumber||'',
       campo, valor: nuevoValor
     });
+    console.log('GET URL:', API_URL() + '?' + p.toString());
+    console.log('rowE:', rowE);
     fetch(API_URL() + '?' + p.toString());
     toast('✓ Guardado en Sheet');
   } catch(e) {
