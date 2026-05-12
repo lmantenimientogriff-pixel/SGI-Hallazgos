@@ -95,7 +95,7 @@ button.btn-red{background:var(--red-bg);color:var(--red-text);border-color:var(-
 .ftag button{background:none;border:none;padding:0;cursor:pointer;color:var(--blue-text);font-size:11px;line-height:1;margin-left:2px}
 
 /* KPIS */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-bottom:13px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:13px}@media(max-width:900px){.kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:600px){.kpis{grid-template-columns:repeat(2,1fr)}}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px}
 .kpi .lbl{font-size:10px;color:var(--text2);margin-bottom:4px}
 .kpi .val{font-size:24px;font-weight:600;line-height:1}
@@ -290,7 +290,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div style="margin-bottom:4px"><span class="logo-badge">GRIFFOULIERE</span><span style="font-size:11px;color:var(--text3)">Sistema de Gestión Integrado</span></div>
       <h1>Tablero de Hallazgos SGI</h1>
       <div class="sub" id="subtitle">Cargando...</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">13</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">28</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
     </div>
     <div class="hactions">
       <button onclick="recargar()"><i class="ti ti-refresh"></i> Actualizar</button>
@@ -352,14 +352,16 @@ tbody tr:hover td{background:var(--surface2)}
 
   <!-- KPIS -->
   <div class="kpis">
-    <div class="kpi"><div class="lbl">Total hallazgos</div><div class="val" id="k-total">—</div><div class="sub">en la selección</div></div>
-    <div class="kpi"><div class="lbl">No conformidades</div><div class="val" id="k-nc">—</div><div class="sub" id="k-nc-pct">—</div></div>
-    <div class="kpi"><div class="lbl">Oport. de mejora</div><div class="val" id="k-om">—</div><div class="sub" id="k-om-pct">—</div></div>
-    <div class="kpi ok"><div class="lbl">Correc. finalizadas</div><div class="val" id="k-fin">—</div><div class="sub" id="k-fin-pct">—</div></div>
-    <div class="kpi warn"><div class="lbl">En curso</div><div class="val" id="k-cur">—</div><div class="sub" id="k-cur-pct">—</div></div>
-    <div class="kpi danger"><div class="lbl">Pendientes</div><div class="val" id="k-pen">—</div><div class="sub" id="k-pen-pct">—</div></div>
-    <div class="kpi danger"><div class="lbl">Acciones vencidas</div><div class="val" id="k-venc">—</div><div class="sub">sin cierre</div></div>
-    <div class="kpi"><div class="lbl">Avance acciones</div><div class="val" id="k-av">—</div><div class="pbar"><div class="pfill" id="k-bar" style="width:0%"></div></div></div>
+    <div class="kpi"><div class="lbl">1. Total hallazgos</div><div class="val" id="k-total">—</div><div class="sub">en la selección</div></div>
+    <div class="kpi"><div class="lbl">2. No Conformidades</div><div class="val" id="k-nc">—</div><div class="sub" id="k-nc-pct">—</div></div>
+    <div class="kpi"><div class="lbl">3. Observaciones</div><div class="val" id="k-obs">—</div><div class="sub" id="k-obs-pct">—</div></div>
+    <div class="kpi"><div class="lbl">4. Oport. de Mejora</div><div class="val" id="k-om">—</div><div class="sub" id="k-om-pct">—</div></div>
+    <div class="kpi"><div class="lbl">5. Fortalezas</div><div class="val" id="k-fort">—</div><div class="sub" id="k-fort-pct">—</div></div>
+    <div class="kpi ok"><div class="lbl">6. Correc. Finalizadas</div><div class="val" id="k-fin">—</div><div class="sub" id="k-fin-pct">—</div></div>
+    <div class="kpi warn"><div class="lbl">7. Correc. En Curso</div><div class="val" id="k-cur">—</div><div class="sub" id="k-cur-pct">—</div></div>
+    <div class="kpi danger"><div class="lbl">8. Correc. Pendientes</div><div class="val" id="k-pen">—</div><div class="sub" id="k-pen-pct">—</div></div>
+    <div class="kpi danger"><div class="lbl">9. Acciones Sin Cierre</div><div class="val" id="k-venc">—</div><div class="sub">abiertas y vencidas</div></div>
+    <div class="kpi"><div class="lbl">10. Avance Acciones</div><div class="val" id="k-av">—</div><div class="pbar"><div class="pfill" id="k-bar" style="width:0%"></div></div></div>
   </div>
 
   <!-- TABS -->
@@ -895,23 +897,32 @@ function renderActiveTags(){
 // ─── RENDER PRINCIPAL ─────────────────────────────────────────────────────
 function renderTodo(){
   const data=filtrados,total=data.length;
-  const nc=data.filter(r=>r.tipoHallazgo.toLowerCase().includes('no conform')).length;
-  const om=data.filter(r=>r.tipoHallazgo.toLowerCase().includes('oportunidad')).length;
+  const nc=data.filter(r=>r.tipoHallazgo==='No Conformidad').length;
+  const obs=data.filter(r=>r.tipoHallazgo==='Observación').length;
+  const om=data.filter(r=>r.tipoHallazgo==='Oportunidad de Mejora').length;
+  const fort=data.filter(r=>r.tipoHallazgo==='Fortaleza').length;
   const fin=data.filter(r=>r.estCorr.trim()==='FINALIZADO').length;
   const cur=data.filter(r=>r.estCorr.trim()==='EN CURSO').length;
   const pen=data.filter(r=>r.estCorr.trim()==='PENDIENTE').length;
   const finAc=data.filter(r=>r.estAcc.trim()==='FINALIZADO').length;
   const hoy=new Date();
-  const venc=data.filter(r=>{const d=parseDate(r.fImpl);return d&&d<hoy&&r.estAcc.trim()!=='FINALIZADO';}).length;
-  const av=total>0?Math.round(finAc/total*100):0;
+  const enCurso=data.filter(r=>r.estAcc.trim()==='EN CURSO').length;
+  const pendAc=data.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
+  // BL pendiente = PENDIENTE o #N/A (sin cierre)
+  const pendBL=data.filter(r=>r.estCierre==='PENDIENTE'||r.estCierre==='#N/A'||r.estCierre==='').length;
+  // FORMULA: FINALIZADO(AC) / (FINALIZADO(AC) + EN CURSO(AC) + PENDIENTE(AC) + PENDIENTE(BL))
+  const denominador=finAc+enCurso+pendAc+pendBL;
+  const av=denominador>0?Math.round(finAc/denominador*100):0;
   const pct=n=>total?`${Math.round(n/total*100)}% del total`:'—';
   document.getElementById('k-total').textContent=total;
   document.getElementById('k-nc').textContent=nc;document.getElementById('k-nc-pct').textContent=pct(nc);
+  document.getElementById('k-obs').textContent=obs;document.getElementById('k-obs-pct').textContent=pct(obs);
   document.getElementById('k-om').textContent=om;document.getElementById('k-om-pct').textContent=pct(om);
+  document.getElementById('k-fort').textContent=fort;document.getElementById('k-fort-pct').textContent=pct(fort);
   document.getElementById('k-fin').textContent=fin;document.getElementById('k-fin-pct').textContent=pct(fin);
   document.getElementById('k-cur').textContent=cur;document.getElementById('k-cur-pct').textContent=pct(cur);
   document.getElementById('k-pen').textContent=pen;document.getElementById('k-pen-pct').textContent=pct(pen);
-  document.getElementById('k-venc').textContent=venc;
+  document.getElementById('k-venc').textContent=sinCierre;
   document.getElementById('k-av').textContent=av+'%';
   document.getElementById('k-bar').style.width=av+'%';
   document.getElementById('fcount').textContent=`${total} registros`;
@@ -923,35 +934,90 @@ function mc(id,type,labels,data,colors){
   if(charts[id])charts[id].destroy();
   const ctx=document.getElementById(id);if(!ctx)return;
   const bg=type==='doughnut'?colors:data.map((_,i)=>colors[Math.min(i,colors.length-1)]);
-  charts[id]=new Chart(ctx,{type,data:{labels,datasets:[{data,backgroundColor:bg,borderWidth:0,borderRadius:type==='bar'?4:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:type==='doughnut',position:'bottom',labels:{font:{size:10},boxWidth:10,padding:7}}},scales:type==='bar'?{x:{ticks:{font:{size:9},autoSkip:false,maxRotation:40}},y:{ticks:{font:{size:9},stepSize:1},beginAtZero:true}}:{}}});
+  const total=data.reduce((a,b)=>a+b,0);
+  charts[id]=new Chart(ctx,{type,data:{labels,datasets:[{data,backgroundColor:bg,borderWidth:0,borderRadius:type==='bar'?4:0}]},options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{display:type==='doughnut',position:'bottom',labels:{font:{size:10},boxWidth:10,padding:7}},
+      tooltip:{callbacks:{
+        label: function(ctx){
+          if(type==='doughnut'){
+            const val=ctx.parsed;
+            const pct=total>0?((val/total)*100).toFixed(1):'0';
+            return ` ${ctx.label}: ${val} (${pct}%)`;
+          }
+          return ` ${ctx.label}: ${ctx.parsed.y}`;
+        }
+      }}
+    },
+    scales:type==='bar'?{x:{ticks:{font:{size:9},autoSkip:false,maxRotation:40}},y:{ticks:{font:{size:9},stepSize:1},beginAtZero:true}}:{}
+  }});
 }
 function cntTop(data,key,n=8){
   const m={};data.forEach(r=>{const v=r[key]||'Sin datos';m[v]=(m[v]||0)+1;});
   return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,n);
 }
 function renderCharts(data){
+  // Helper: filtrar entradas con valor 0
+  const noZero = (obj, colors) => {
+    const entries = Object.entries(obj).filter(([,v])=>v>0);
+    return {labels:entries.map(e=>e[0]), vals:entries.map(e=>e[1]), colors: colors.filter((_,i)=>i<entries.length)};
+  };
+  const colMap = (keys, colors) => keys.map((_,i)=>colors[i%colors.length]);
+
   // 1. Estado Corrección (Col U)
-  const eC={'FINALIZADO':0,'EN CURSO':0,'PENDIENTE':0,'Sin estado':0};
-  data.forEach(r=>{const k=r.estCorr.trim()||'Sin estado';eC[k]!==undefined?eC[k]++:eC['Sin estado']++;});
-  mc('c-estcorr','doughnut',Object.keys(eC),Object.values(eC),['#1D9E75','#EF9F27','#E24B4A','#888780']);
+  const eC={};
+  data.forEach(r=>{const k=r.estCorr.trim()||'Sin estado';eC[k]=(eC[k]||0)+1;});
+  const eCols={'FINALIZADO':'#1D9E75','EN CURSO':'#EF9F27','PENDIENTE':'#E24B4A'};
+  const eKeys=Object.keys(eC).filter(k=>eC[k]>0);
+  let ePalIdx=3;
+  const eColors=eKeys.map(k=>eCols[k]||((['#378ADD','#534AB7','#888780','#E07B39','#2BBFB3'])[ePalIdx++%5]));
+  mc('c-estcorr','doughnut',eKeys,eKeys.map(k=>eC[k]),eColors);
+
   const dTop=cntTop(data,'depto');
   mc('c-depto','bar',dTop.map(x=>x[0]),dTop.map(x=>x[1]),['#378ADD']);
+
   const tC={};data.forEach(r=>{const v=r.tipoHallazgo||'Sin tipo';tC[v]=(tC[v]||0)+1;});
-  mc('c-tipo','doughnut',Object.keys(tC),Object.values(tC),['#E24B4A','#378ADD','#888780','#1D9E75','#EF9F27']);
-  // 2. Estado Acción Correctiva (Col AC)
-  const aC={'FINALIZADO':0,'EN CURSO':0,'PENDIENTE':0,'Sin estado':0};
-  data.forEach(r=>{const k=r.estAcc.trim()||'Sin estado';aC[k]!==undefined?aC[k]++:aC['Sin estado']++;});
-  mc('c-estacc','doughnut',Object.keys(aC),Object.values(aC),['#1D9E75','#EF9F27','#E24B4A','#888780']);
+  const tF=noZero(tC,['#E24B4A','#378ADD','#888780','#1D9E75','#EF9F27']);
+  mc('c-tipo','doughnut',tF.labels,tF.vals,tF.colors);
+
+  // 3. Estado Acción Correctiva (Col AC)
+  const aC={};
+  data.forEach(r=>{const k=r.estAcc.trim()||'Sin estado';aC[k]=(aC[k]||0)+1;});
+  const aKeys=Object.keys(aC).filter(k=>aC[k]>0);
+  // Paleta extendida — colores distintos para cada valor
+  const PALETTE=['#1D9E75','#EF9F27','#E24B4A','#378ADD','#534AB7','#888780','#E07B39','#2BBFB3','#C84B98','#6BAE45','#D4A017','#5B7FA6'];
+  const knownCols={'FINALIZADO':'#1D9E75','EN CURSO':'#EF9F27','PENDIENTE':'#E24B4A'};
+  let palIdx=3; // empezar desde el 4to color para los desconocidos
+  const aColors=aKeys.map(k=>{
+    if(knownCols[k]) return knownCols[k];
+    return PALETTE[palIdx++%PALETTE.length];
+  });
+  mc('c-estacc','doughnut',aKeys,aKeys.map(k=>aC[k]),aColors);
+
   // 2. Estado Cierre Hallazgo (Col BL)
   const cC={'CERRADO':0,'PENDIENTE':0};
   data.forEach(r=>{const k=r.estCierre||'PENDIENTE';cC[k]!==undefined?cC[k]++:(cC['PENDIENTE']++);});
-  mc('c-estcierre','doughnut',Object.keys(cC),Object.values(cC),['#1D9E75','#E24B4A']);
+  const cF=noZero(cC,['#1D9E75','#E24B4A']);
+  mc('c-estcierre','doughnut',cF.labels,cF.vals,cF.colors);
+
   // 4. Verificación de eficacia
   const vC={};
-  data.forEach(r=>{const k=r.estVerif&&r.estVerif.trim()?r.estVerif.trim():'Sin verificar';vC[k]=(vC[k]||0)+1;});
-  mc('c-estverif','doughnut',Object.keys(vC),Object.values(vC),['#1D9E75','#EF9F27','#E24B4A','#888780','#534AB7']);
+  const verifCols={'VERIFICA':'#1D9E75','VERIFICA CON OBSERVACIONES':'#EF9F27','NO VERIFICA':'#E24B4A','SIN VERIFICAR':'#888780'};
+  data.forEach(r=>{
+    const raw=(r.estVerif||'').trim();
+    // Normalizar: vacío, "Sin verificar", "SIN VERIFICAR" → "Sin verificar"
+    const k=normVerif(raw);
+    vC[k]=(vC[k]||0)+1;
+  });
+  const vKeys=Object.keys(vC).filter(k=>vC[k]>0);
+  let vPalIdx=3;
+  const vColors=vKeys.map(k=>verifCols[k]||(k==='SIN VERIFICAR'?'#888780':(['#378ADD','#534AB7','#E07B39','#2BBFB3'][vPalIdx++%4])));
+  mc('c-estverif','doughnut',vKeys,vKeys.map(k=>vC[k]),vColors);
+
   const empTop=cntTop(data,'empresa',10);
   mc('c-empresa','bar',empTop.map(x=>x[0]),empTop.map(x=>x[1]),['#534AB7','#1D9E75','#EF9F27','#E24B4A','#378ADD']);
+
   const hoy=new Date();
   const bk={'Vencido':0,'0-7d':0,'8-30d':0,'+30d':0,'Sin fecha':0};
   data.filter(r=>r.estAcc.trim()!=='FINALIZADO').forEach(r=>{
@@ -959,7 +1025,8 @@ function renderCharts(data){
     const diff=Math.round((d-hoy)/86400000);
     if(diff<0)bk['Vencido']++;else if(diff<=7)bk['0-7d']++;else if(diff<=30)bk['8-30d']++;else bk['+30d']++;
   });
-  mc('c-venc','bar',Object.keys(bk),Object.values(bk),['#E24B4A','#E24B4A','#EF9F27','#1D9E75','#888780']);
+  const bkF=noZero(bk,['#E24B4A','#E24B4A','#EF9F27','#1D9E75','#888780']);
+  mc('c-venc','bar',bkF.labels,bkF.vals,bkF.colors);
 }
 
 // ─── RESPONSABLES ──────────────────────────────────────────────────────────
@@ -1206,6 +1273,17 @@ document.addEventListener('click', e => {
   }
 });
 
+// ─── NORMALIZACIÓN VERIFICACIÓN EFICACIA ────────────────────────────────
+function normVerif(v){
+  if(!v)return'SIN VERIFICAR';
+  const t=v.trim().toUpperCase();
+  if(t==='VERIFICA')return'VERIFICA';
+  if(t==='NO VERIFICA')return'NO VERIFICA';
+  if(t==='VERIFICA CON OBSERVACIONES')return'VERIFICA CON OBSERVACIONES';
+  if(t==='SIN VERIFICAR')return'SIN VERIFICAR';
+  return v.trim().toUpperCase();
+}
+
 // ─── NORMALIZACIÓN ESTADO CIERRE (Col. BL) ───────────────────────────────
 function normCierre(v){
   if(!v||v.trim()===''||v.trim()==='#N/A'||v.trim()==='N/A')return'PENDIENTE';
@@ -1223,6 +1301,7 @@ function normTipo(v){
   if(t.includes('no conform'))return'No Conformidad';
   if(t.includes('oportunidad'))return'Oportunidad de Mejora';
   if(t.includes('observ'))return'Observación';
+  if(t.includes('fortaleza'))return'Fortaleza';
   return v.trim().replace(/\w\S*/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());
 }
 
@@ -1256,7 +1335,7 @@ function mapRow(r){
     estAcc:r['ESTADO (LO ACTUALIZA EL RESPONSABLE)']||'',
     fCierre:r['Fecha de Cierre']||'',
     obsCierre:r['Observaciones -cierre']||'',
-    estVerif:r['Estado de la verificacion']||'',
+    estVerif:normVerif((r['Estado de la verificacion']||'').trim()),
     obsVerif:r['verificación eficacia / Observaciones']||'',
     estCierre:normCierre(r['CIERRE PROCESO']||''),
   };
