@@ -155,7 +155,7 @@ button.btn-red{background:var(--red-bg);color:var(--red-text);border-color:var(-
 .ebtns{display:flex;gap:7px}
 .twrap{overflow-x:auto}
 .twrap table{min-width:max-content}
-.scroll-top{overflow-x:auto;overflow-y:hidden;height:14px;margin-bottom:2px}
+.scroll-top{overflow-x:auto;overflow-y:hidden;height:14px;margin-bottom:2px;position:sticky;top:0;z-index:10;background:var(--surface)}
 .scroll-top-inner{height:1px}
 table{width:100%;border-collapse:collapse;font-size:11px}
 th{text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);background:var(--surface2);cursor:pointer;user-select:none;white-space:nowrap}
@@ -293,7 +293,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div style="margin-bottom:4px"><span class="logo-badge">GRIFFOULIERE</span><span style="font-size:11px;color:var(--text3)">Sistema de Gestión Integrado</span></div>
       <h1>Tablero de Hallazgos SGI</h1>
       <div class="sub" id="subtitle">Cargando...</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">38</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">00</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">12/05/2026</strong></div>
     </div>
     <div class="hactions">
       <button onclick="recargar()"><i class="ti ti-refresh"></i> Actualizar</button>
