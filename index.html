@@ -95,7 +95,7 @@ button.btn-red{background:var(--red-bg);color:var(--red-text);border-color:var(-
 .ftag button{background:none;border:none;padding:0;cursor:pointer;color:var(--blue-text);font-size:11px;line-height:1;margin-left:2px}
 
 /* KPIS */
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:13px}@media(max-width:900px){.kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:600px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;margin-bottom:13px}@media(max-width:1100px){.kpis{grid-template-columns:repeat(4,1fr)}}@media(max-width:700px){.kpis{grid-template-columns:repeat(2,1fr)}}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px}
 .kpi .lbl{font-size:10px;color:var(--text2);margin-bottom:4px}
 .kpi .val{font-size:24px;font-weight:600;line-height:1}
@@ -290,7 +290,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div style="margin-bottom:4px"><span class="logo-badge">GRIFFOULIERE</span><span style="font-size:11px;color:var(--text3)">Sistema de Gestión Integrado</span></div>
       <h1>Tablero de Hallazgos SGI</h1>
       <div class="sub" id="subtitle">Cargando...</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">29</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">33</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
     </div>
     <div class="hactions">
       <button onclick="recargar()"><i class="ti ti-refresh"></i> Actualizar</button>
@@ -357,11 +357,12 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="kpi"><div class="lbl">3. Observaciones</div><div class="val" id="k-obs">—</div><div class="sub" id="k-obs-pct">—</div></div>
     <div class="kpi"><div class="lbl">4. Oport. de Mejora</div><div class="val" id="k-om">—</div><div class="sub" id="k-om-pct">—</div></div>
     <div class="kpi"><div class="lbl">5. Fortalezas</div><div class="val" id="k-fort">—</div><div class="sub" id="k-fort-pct">—</div></div>
-    <div class="kpi ok"><div class="lbl">6. Correc. Finalizadas</div><div class="val" id="k-fin">—</div><div class="sub" id="k-fin-pct">—</div></div>
-    <div class="kpi warn"><div class="lbl">7. Correc. En Curso</div><div class="val" id="k-cur">—</div><div class="sub" id="k-cur-pct">—</div></div>
-    <div class="kpi danger"><div class="lbl">8. Correc. Pendientes</div><div class="val" id="k-pen">—</div><div class="sub" id="k-pen-pct">—</div></div>
-    <div class="kpi danger"><div class="lbl">9. Acciones Sin Cierre</div><div class="val" id="k-venc">—</div><div class="sub">abiertas y vencidas</div></div>
-    <div class="kpi"><div class="lbl">10. Avance Acciones</div><div class="val" id="k-av">—</div><div class="pbar"><div class="pfill" id="k-bar" style="width:0%"></div></div></div>
+    <div class="kpi"><div class="lbl">6. Integrales</div><div class="val" id="k-int">—</div><div class="sub" id="k-int-pct">—</div></div>
+    <div class="kpi ok"><div class="lbl">7. Acc. Finalizadas</div><div class="val" id="k-fin">—</div><div class="sub" id="k-fin-pct">—</div></div>
+    <div class="kpi warn"><div class="lbl">8. Acc. En Curso</div><div class="val" id="k-cur">—</div><div class="sub" id="k-cur-pct">—</div></div>
+    <div class="kpi danger"><div class="lbl">9. Acc. Pendientes</div><div class="val" id="k-pen">—</div><div class="sub" id="k-pen-pct">—</div></div>
+    <div class="kpi danger"><div class="lbl">10. Acciones Sin Cierre</div><div class="val" id="k-venc">—</div><div class="sub">abiertas y vencidas</div></div>
+    <div class="kpi"><div class="lbl">11. Avance Acciones</div><div class="val" id="k-av">—</div><div class="pbar"><div class="pfill" id="k-bar" style="width:0%"></div></div></div>
   </div>
 
   <!-- TABS -->
@@ -687,6 +688,8 @@ function pillTipo(t){
   if(!t)return'—';
   if(t.toLowerCase().includes('no conform'))return`<span class="pill p-nc">NC</span>`;
   if(t.toLowerCase().includes('oportunidad'))return`<span class="pill p-om">OM</span>`;
+  if(t.toLowerCase().includes('fortaleza'))return`<span class="pill" style="background:var(--green-bg);color:var(--green-text)">FORT</span>`;
+  if(t.toLowerCase().includes('integral'))return`<span class="pill" style="background:var(--purple-bg);color:var(--purple-text)">INT</span>`;
   return`<span class="pill p-obs">OBS</span>`;
 }
 
@@ -901,9 +904,10 @@ function renderTodo(){
   const obs=data.filter(r=>r.tipoHallazgo==='Observación').length;
   const om=data.filter(r=>r.tipoHallazgo==='Oportunidad de Mejora').length;
   const fort=data.filter(r=>r.tipoHallazgo==='Fortaleza').length;
-  const fin=data.filter(r=>r.estCorr.trim()==='FINALIZADO').length;
-  const cur=data.filter(r=>r.estCorr.trim()==='EN CURSO').length;
-  const pen=data.filter(r=>r.estCorr.trim()==='PENDIENTE').length;
+  const integ=data.filter(r=>r.tipoHallazgo==='Integral').length;
+  const fin=data.filter(r=>r.estAcc.trim()==='FINALIZADO').length;
+  const cur=data.filter(r=>r.estAcc.trim()==='EN CURSO').length;
+  const pen=data.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
   const finAc=data.filter(r=>r.estAcc.trim()==='FINALIZADO').length;
   const hoy=new Date();
   const enCurso=data.filter(r=>r.estAcc.trim()==='EN CURSO').length;
@@ -914,15 +918,14 @@ function renderTodo(){
   // FORMULA: FINALIZADO(AC) / (FINALIZADO(AC) + EN CURSO(AC) + PENDIENTE(AC) + PENDIENTE(BL))
   const denominador=finAc+enCurso+pendAc+pendBL;
   const av=denominador>0?Math.round(finAc/denominador*100):0;
-  console.log('AVANCE DEBUG',{total,finAc,enCurso,pendAc,pendBL,denominador,av});
-  console.log('estCierre unique',[...new Set(data.map(r=>r.estCierre))]);
-  console.log('estAcc unique',[...new Set(data.map(r=>r.estAcc))]);
+
   const pct=n=>total?`${Math.round(n/total*100)}% del total`:'—';
   document.getElementById('k-total').textContent=total;
   document.getElementById('k-nc').textContent=nc;document.getElementById('k-nc-pct').textContent=pct(nc);
   document.getElementById('k-obs').textContent=obs;document.getElementById('k-obs-pct').textContent=pct(obs);
   document.getElementById('k-om').textContent=om;document.getElementById('k-om-pct').textContent=pct(om);
   document.getElementById('k-fort').textContent=fort;document.getElementById('k-fort-pct').textContent=pct(fort);
+  document.getElementById('k-int').textContent=integ;document.getElementById('k-int-pct').textContent=pct(integ);
   document.getElementById('k-fin').textContent=fin;document.getElementById('k-fin-pct').textContent=pct(fin);
   document.getElementById('k-cur').textContent=cur;document.getElementById('k-cur-pct').textContent=pct(cur);
   document.getElementById('k-pen').textContent=pen;document.getElementById('k-pen-pct').textContent=pct(pen);
@@ -1288,6 +1291,16 @@ function normVerif(v){
   return v.trim().toUpperCase();
 }
 
+// ─── NORMALIZACIÓN ESTADO ACCIÓN CORRECTIVA (Col. AC) ───────────────────
+function normEstAcc(v){
+  if(!v||v.trim()==='')return'PENDIENTE';
+  const t=v.trim().toUpperCase();
+  if(t==='FINALIZADO'||t==='CUMPLE'||t==='ANULADO')return'FINALIZADO';
+  if(t==='EN CURSO')return'EN CURSO';
+  if(t==='PENDIENTE'||t==='NO CUMPLE'||t==='CUMPLE C/OBSERVACIONES'||t==='NO ENCONTRADO')return'PENDIENTE';
+  return'PENDIENTE';
+}
+
 // ─── NORMALIZACIÓN ESTADO CIERRE (Col. BL) ───────────────────────────────
 function normCierre(v){
   if(!v||v.trim()===''||v.trim()==='#N/A'||v.trim()==='N/A')return'PENDIENTE';
@@ -1306,6 +1319,7 @@ function normTipo(v){
   if(t.includes('oportunidad'))return'Oportunidad de Mejora';
   if(t.includes('observ'))return'Observación';
   if(t.includes('fortaleza'))return'Fortaleza';
+  if(t.includes('integral'))return'Integral';
   return v.trim().replace(/\w\S*/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());
 }
 
@@ -1336,7 +1350,7 @@ function mapRow(r){
     accionDesc:r['Acción - Descripción de la acción correctiva (La acción correctiva no debe ser igual a la corrección pues la acción correctiva elimina la causa)']||'',
     respAcc:r['Resp. Implementación - APELLIDOYNOMBRE']||'',
     fImpl:r['Fecha implementación']||'',
-    estAcc:r['ESTADO (LO ACTUALIZA EL RESPONSABLE)']||'',
+    estAcc:normEstAcc(r['ESTADO (LO ACTUALIZA EL RESPONSABLE)']||''),
     fCierre:r['Fecha de Cierre']||'',
     obsCierre:r['Observaciones -cierre']||'',
     estVerif:normVerif((r['Estado de la verificacion']||'').trim()),
