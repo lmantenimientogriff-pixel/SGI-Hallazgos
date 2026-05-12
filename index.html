@@ -290,7 +290,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div style="margin-bottom:4px"><span class="logo-badge">GRIFFOULIERE</span><span style="font-size:11px;color:var(--text3)">Sistema de Gestión Integrado</span></div>
       <h1>Tablero de Hallazgos SGI</h1>
       <div class="sub" id="subtitle">Cargando...</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">28</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">29</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">11/05/2026</strong></div>
     </div>
     <div class="hactions">
       <button onclick="recargar()"><i class="ti ti-refresh"></i> Actualizar</button>
@@ -908,11 +908,15 @@ function renderTodo(){
   const hoy=new Date();
   const enCurso=data.filter(r=>r.estAcc.trim()==='EN CURSO').length;
   const pendAc=data.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
-  // BL pendiente = PENDIENTE o #N/A (sin cierre)
-  const pendBL=data.filter(r=>r.estCierre==='PENDIENTE'||r.estCierre==='#N/A'||r.estCierre==='').length;
+  // BL pendiente = PENDIENTE o #N/A (sin cierre) — normCierre ya convierte #N/A a PENDIENTE
+  const pendBL=data.filter(r=>r.estCierre==='PENDIENTE').length;
+  const sinCierre=pendBL; // alias para KPI 9
   // FORMULA: FINALIZADO(AC) / (FINALIZADO(AC) + EN CURSO(AC) + PENDIENTE(AC) + PENDIENTE(BL))
   const denominador=finAc+enCurso+pendAc+pendBL;
   const av=denominador>0?Math.round(finAc/denominador*100):0;
+  console.log('AVANCE DEBUG',{total,finAc,enCurso,pendAc,pendBL,denominador,av});
+  console.log('estCierre unique',[...new Set(data.map(r=>r.estCierre))]);
+  console.log('estAcc unique',[...new Set(data.map(r=>r.estAcc))]);
   const pct=n=>total?`${Math.round(n/total*100)}% del total`:'—';
   document.getElementById('k-total').textContent=total;
   document.getElementById('k-nc').textContent=nc;document.getElementById('k-nc-pct').textContent=pct(nc);
