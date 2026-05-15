@@ -1056,6 +1056,24 @@ function renderCharts(data){
 }
 
 // ─── RESPONSABLES ──────────────────────────────────────────────────────────
+
+// ─── HELPERS ESTADO DESPLEGABLES ─────────────────────────────────────────────
+function getOpenBlocks() {
+  const open = [];
+  document.querySelectorAll('.resp-hallazgos.open').forEach(el => {
+    open.push(el.id); // ej: "rh-0", "rh-2"
+  });
+  return open;
+}
+function restoreOpenBlocks(openIds) {
+  openIds.forEach(id => {
+    const block = document.getElementById(id);
+    const idx = id.replace('rh-', '');
+    const tog = document.getElementById('rtog-' + idx);
+    if (block) block.classList.add('open');
+    if (tog) tog.classList.add('open');
+  });
+}
 function renderResponsables(data){
   const hoy=new Date();
   const mapa={};
@@ -1295,7 +1313,9 @@ async function setEstado(nuevoValor, ev) {
   }
   registrarLog(row?.serialNumber, row?.nHall, campo, valorAnterior, nuevoValor);
   renderTabla(filtrados);
+  const _openBlocks = getOpenBlocks();
   renderResponsables(filtrados);
+  restoreOpenBlocks(_openBlocks);
   toast('Guardando...', 1500);
   try {
     const rowE = rawData.find(r => r.rowId === rowId);
