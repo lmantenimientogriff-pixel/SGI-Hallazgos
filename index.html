@@ -1945,11 +1945,7 @@ function renderPlan(data) {
           <div class="plan-label">Acción Correctiva</div>
           <div class="plan-text">${r.accionDesc||'Sin acción registrada'}</div>
         </div>
-        ${r.causaRaiz && r.causaRaiz!=='—'?`
-        <div class="plan-section">
-          <div class="plan-label">Causa Raíz</div>
-          <div class="plan-text">${r.causaRaiz}</div>
-        </div>`:''}
+
         ${r.obsVerif?`
         <div class="plan-section">
           <div class="plan-label">Obs. Verificación</div>
@@ -1968,7 +1964,7 @@ function renderPlan(data) {
           <span class="plan-footer-label">Verif. Eficacia</span>
           <span class="plan-badge" style="background:${vc.bg};color:${vc.fg}">${r.estVerif||'Sin verificar'}</span>
         </div>
-        ${r.crit?`<div class="plan-footer-item"><span class="plan-footer-label">Criticidad</span><span>${r.crit}</span></div>`:''}
+
       </div>
     </div>`;
   }).join('');
@@ -2000,7 +1996,7 @@ function exportarPlanPDF() {
           <span style="font-size:10px;color:#666">${fmtDate(r.fechaAud)} · ${r.empresa||'—'} · ${r.unNegocio||'—'}</span>
           <span class="badge-tipo">${r.tipoHallazgo||'—'}</span>
           ${r.origen?`<span style="font-size:9px;color:#888">${r.origen}</span>`:''}
-          ${r.crit?`<span class="badge-crit">${r.crit}</span>`:''}
+
         </div>
       </div>
       <div class="row-body">
@@ -2016,10 +2012,7 @@ function exportarPlanPDF() {
           <div class="field-label">Acción Correctiva</div>
           <div class="field-val">${r.accionDesc||'Sin acción registrada'}</div>
         </div>
-        ${r.causaRaiz&&r.causaRaiz!=='—'?`<div class="field-block">
-          <div class="field-label">Causa Raíz</div>
-          <div class="field-val">${r.causaRaiz}</div>
-        </div>`:''}
+
         ${r.obsVerif?`<div class="field-block">
           <div class="field-label">Obs. Verificación Eficacia</div>
           <div class="field-val">${r.obsVerif}</div>
