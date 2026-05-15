@@ -262,6 +262,18 @@ tbody tr:hover td{background:var(--surface2)}
 .edit-textarea{width:100%;min-height:36px;font-size:11px;font-family:inherit;color:var(--text);background:var(--surface);border:1px solid transparent;border-radius:var(--r);padding:4px 6px;resize:none;line-height:1.4;transition:border-color .15s;overflow:hidden}
 .edit-textarea:hover{border-color:var(--border2)}
 .edit-textarea:focus{border-color:var(--blue);outline:none;background:var(--surface2)}
+.plan-row{background:var(--surface);border:1px solid var(--border2);border-radius:var(--rl);margin-bottom:12px;overflow:hidden}
+.plan-header{background:var(--surface2);padding:8px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px}
+.plan-num{font-size:13px;font-weight:700;color:var(--text)}
+.plan-meta{font-size:10px;color:var(--text3)}
+.plan-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.plan-section{}
+.plan-label{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.plan-text{font-size:11px;color:var(--text);line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.plan-footer{background:var(--surface2);padding:8px 14px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px}
+.plan-footer-item{display:flex;flex-direction:column;gap:2px;font-size:10px;color:var(--text)}
+.plan-footer-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px}
+.plan-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700}
 .edit-textarea-sm{width:100%;max-width:155px;min-height:44px;font-size:10px;font-family:inherit;color:var(--text);background:var(--surface);border:1px solid transparent;border-radius:var(--r);padding:4px 6px;resize:none;line-height:1.4;transition:border-color .15s;box-sizing:border-box}
 .edit-textarea-sm:hover{border-color:var(--border2)}
 .edit-textarea-sm:focus{border-color:var(--blue);outline:none;background:var(--surface2)}
@@ -382,6 +394,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="tab active" onclick="switchTab('graficos',this)"><i class="ti ti-chart-bar" style="font-size:12px"></i> Gráficos</div>
     <div class="tab" onclick="switchTab('responsables',this)"><i class="ti ti-users" style="font-size:12px"></i> Responsables</div>
     <div class="tab" onclick="switchTab('detalle',this)"><i class="ti ti-table" style="font-size:12px"></i> Detalle</div>
+    <div class="tab" onclick="switchTab('plan',this)"><i class="ti ti-file-description" style="font-size:12px"></i> Plan de Acción</div>
     <div class="tab" id="tab-log-btn" onclick="switchTab('log',this)" style="display:none"><i class="ti ti-history" style="font-size:12px"></i> Log de cambios</div>
     <div class="tab" id="tab-usr-btn" onclick="switchTab('usuarios',this)" style="display:none"><i class="ti ti-users" style="font-size:12px"></i> Usuarios</div>
   </div>
@@ -468,6 +481,19 @@ tbody tr:hover td{background:var(--surface2)}
 </div>
 
   <!-- TAB LOG -->
+  <div class="tcontent" id="tab-plan">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">Plan de Acción</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px" id="plan-subtitle">Basado en filtros activos</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-green" onclick="exportarPlanPDF()"><i class="ti ti-file-text"></i> Exportar PDF</button>
+        <button onclick="exportarPlanExcel()"><i class="ti ti-file-spreadsheet"></i> Exportar Excel</button>
+      </div>
+    </div>
+    <div id="plan-container"></div>
+  </div>
   <div class="tcontent" id="tab-log">
     <div class="tbl-card">
       <div class="tbl-hdr">
@@ -595,6 +621,7 @@ function switchTab(id,el){
     restoreOpenBlocks(_open);
   }
   if(id==='detalle' && filtrados.length) renderTabla(filtrados);
+  if(id==='plan' && filtrados.length) renderPlan(filtrados);
 }
 
 async function cargarLogSheet(){
@@ -966,7 +993,9 @@ function renderTodo(){
   document.getElementById('k-av').textContent=av+'%';
   document.getElementById('k-bar').style.width=av+'%';
   document.getElementById('fcount').textContent=`${total} registros`;
-  renderCharts(data);renderResponsables(data);renderTabla(data);setTimeout(initAutoResize,100);
+  renderCharts(data);renderResponsables(data);renderTabla(data);
+  if(document.getElementById('tab-plan')?.classList.contains('active')) renderPlan(data);
+  setTimeout(initAutoResize,100);
 }
 
 // ─── CHARTS ───────────────────────────────────────────────────────────────
@@ -1859,6 +1888,249 @@ function initAutoResize() {
     ta.addEventListener('input', () => autoResize(ta));
   });
 }
+
+// ─── PLAN DE ACCIÓN ──────────────────────────────────────────────────────────
+
+function estadoColor(est) {
+  const t = (est||'').trim().toUpperCase();
+  if(t==='FINALIZADO') return {bg:'#1D9E75',fg:'#fff'};
+  if(t==='EN CURSO')   return {bg:'#EF9F27',fg:'#fff'};
+  if(t==='PENDIENTE')  return {bg:'#E24B4A',fg:'#fff'};
+  return {bg:'#888',fg:'#fff'};
+}
+
+function verifColor(v) {
+  const t = (v||'').trim().toUpperCase();
+  if(t.includes('VERIFICA CON')) return {bg:'#EF9F27',fg:'#fff'};
+  if(t==='VERIFICA')    return {bg:'#1D9E75',fg:'#fff'};
+  if(t==='NO VERIFICA') return {bg:'#E24B4A',fg:'#fff'};
+  return {bg:'#ccc',fg:'#555'};
+}
+
+function renderPlan(data) {
+  const cont = document.getElementById('plan-container');
+  const sub  = document.getElementById('plan-subtitle');
+  if(!data||!data.length){cont.innerHTML='<div class="empty">Sin datos para los filtros activos</div>';return;}
+  sub.textContent = `${data.length} hallazgo${data.length!==1?'s':''} · Filtros activos`;
+
+  const rows = data.map((r,i) => {
+    const ec = estadoColor(r.estAcc);
+    const vc = verifColor(r.estVerif);
+    const dias = diasR(r.fImpl);
+    let vtoHtml = '—';
+    if(r.estAcc.trim()!=='FINALIZADO' && dias!==null){
+      const cls = dias<0?'#E24B4A':dias<=7?'#EF9F27':'#1D9E75';
+      vtoHtml = `<span style="color:${cls};font-weight:700">${dias>=0?'+'+dias+'d':dias+'d'}</span>`;
+    }
+    return `<div class="plan-row" style="border-left:4px solid ${ec.bg}">
+      <div class="plan-header">
+        <div class="plan-num">${r.nHall||'—'}</div>
+        <div class="plan-meta">${fmtDate(r.fechaAud)} · ${r.empresa||'—'} · ${r.unNegocio||'—'}</div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span class="pill ${r.tipoHallazgo?.toLowerCase().includes('conformidad')?'p-nc':r.tipoHallazgo?.toLowerCase().includes('observ')?'p-obs':'p-om'}">${r.tipoHallazgo||'—'}</span>
+          <span style="font-size:9px;color:var(--text3)">${r.origen||''}</span>
+        </div>
+      </div>
+      <div class="plan-body">
+        <div class="plan-section">
+          <div class="plan-label">Descripción</div>
+          <div class="plan-text">${r.desc||'—'}</div>
+        </div>
+        ${r.correccion && r.correccion!=='—'?`
+        <div class="plan-section">
+          <div class="plan-label">Corrección</div>
+          <div class="plan-text">${r.correccion}</div>
+        </div>`:''}
+        <div class="plan-section">
+          <div class="plan-label">Acción Correctiva</div>
+          <div class="plan-text">${r.accionDesc||'Sin acción registrada'}</div>
+        </div>
+        ${r.causaRaiz && r.causaRaiz!=='—'?`
+        <div class="plan-section">
+          <div class="plan-label">Causa Raíz</div>
+          <div class="plan-text">${r.causaRaiz}</div>
+        </div>`:''}
+        ${r.obsVerif?`
+        <div class="plan-section">
+          <div class="plan-label">Obs. Verificación</div>
+          <div class="plan-text">${r.obsVerif}</div>
+        </div>`:''}
+      </div>
+      <div class="plan-footer">
+        <div class="plan-footer-item"><span class="plan-footer-label">Responsable</span><span>${r.respDir||'—'}</span></div>
+        <div class="plan-footer-item"><span class="plan-footer-label">F. Impl.</span><span>${fmtDate(r.fImpl)||'—'}</span></div>
+        <div class="plan-footer-item"><span class="plan-footer-label">Vto.</span><span>${vtoHtml}</span></div>
+        <div class="plan-footer-item">
+          <span class="plan-footer-label">Estado Acción</span>
+          <span class="plan-badge" style="background:${ec.bg};color:${ec.fg}">${r.estAcc||'—'}</span>
+        </div>
+        <div class="plan-footer-item">
+          <span class="plan-footer-label">Verif. Eficacia</span>
+          <span class="plan-badge" style="background:${vc.bg};color:${vc.fg}">${r.estVerif||'Sin verificar'}</span>
+        </div>
+        ${r.crit?`<div class="plan-footer-item"><span class="plan-footer-label">Criticidad</span><span>${r.crit}</span></div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  cont.innerHTML = rows;
+}
+
+function exportarPlanPDF() {
+  if(!filtrados.length){toast('Sin datos para exportar',2000);return;}
+  const fecha = new Date().toLocaleDateString('es-AR');
+  const total = filtrados.length;
+  const fin   = filtrados.filter(r=>r.estAcc.trim()==='FINALIZADO').length;
+  const cur   = filtrados.filter(r=>r.estAcc.trim()==='EN CURSO').length;
+  const pen   = filtrados.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
+  const venc  = filtrados.filter(r=>{const d=diasR(r.fImpl);return r.estAcc.trim()!=='FINALIZADO'&&d!==null&&d<0;}).length;
+
+  const filas = filtrados.map(r=>{
+    const dias = diasR(r.fImpl);
+    const abierto = r.estAcc.trim()!=='FINALIZADO';
+    let vtoTxt = '—';
+    if(abierto&&dias!==null) vtoTxt = dias>=0?'+'+dias+'d':dias+'d (VENCIDO)';
+    const ec = estadoColor(r.estAcc);
+    const vc = verifColor(r.estVerif);
+    return `
+    <div class="row" style="border-left:4px solid ${ec.bg};page-break-inside:avoid">
+      <div class="row-head">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <strong style="font-size:13px;color:#1a1a2e">${r.nHall||'—'}</strong>
+          <span style="font-size:10px;color:#666">${fmtDate(r.fechaAud)} · ${r.empresa||'—'} · ${r.unNegocio||'—'}</span>
+          <span class="badge-tipo">${r.tipoHallazgo||'—'}</span>
+          ${r.origen?`<span style="font-size:9px;color:#888">${r.origen}</span>`:''}
+          ${r.crit?`<span class="badge-crit">${r.crit}</span>`:''}
+        </div>
+      </div>
+      <div class="row-body">
+        <div class="field-block">
+          <div class="field-label">Descripción del Hallazgo</div>
+          <div class="field-val">${r.desc||'—'}</div>
+        </div>
+        ${r.correccion&&r.correccion!=='—'?`<div class="field-block">
+          <div class="field-label">Corrección</div>
+          <div class="field-val">${r.correccion}</div>
+        </div>`:''}
+        <div class="field-block">
+          <div class="field-label">Acción Correctiva</div>
+          <div class="field-val">${r.accionDesc||'Sin acción registrada'}</div>
+        </div>
+        ${r.causaRaiz&&r.causaRaiz!=='—'?`<div class="field-block">
+          <div class="field-label">Causa Raíz</div>
+          <div class="field-val">${r.causaRaiz}</div>
+        </div>`:''}
+        ${r.obsVerif?`<div class="field-block">
+          <div class="field-label">Obs. Verificación Eficacia</div>
+          <div class="field-val">${r.obsVerif}</div>
+        </div>`:''}
+      </div>
+      <div class="row-foot">
+        <div class="foot-item"><span class="foot-lbl">Responsable</span>${r.respDir||'—'}</div>
+        <div class="foot-item"><span class="foot-lbl">Resp. Acción</span>${r.respAcc||'—'}</div>
+        <div class="foot-item"><span class="foot-lbl">F. Impl.</span>${fmtDate(r.fImpl)||'—'}</div>
+        <div class="foot-item"><span class="foot-lbl">Vencimiento</span>${vtoTxt}</div>
+        <div class="foot-item">
+          <span class="foot-lbl">Estado Acción</span>
+          <span class="badge-est" style="background:${ec.bg};color:${ec.fg}">${r.estAcc||'—'}</span>
+        </div>
+        <div class="foot-item">
+          <span class="foot-lbl">Verif. Eficacia</span>
+          <span class="badge-est" style="background:${vc.bg};color:${vc.fg}">${r.estVerif||'Sin verificar'}</span>
+        </div>
+        ${r.estCierre?`<div class="foot-item"><span class="foot-lbl">Inf. Final</span>${r.estCierre}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Plan de Acción SGI</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family: Arial, sans-serif; font-size:11px; color:#1a1a2e; background:#fff; padding:20px; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; padding-bottom:12px; border-bottom:3px solid #C8102E; }
+  .header-left h1 { font-size:18px; font-weight:700; color:#1a1a2e; }
+  .header-left p  { font-size:10px; color:#666; margin-top:3px; }
+  .header-logo    { font-size:22px; font-weight:900; color:#C8102E; letter-spacing:-1px; }
+  .kpis { display:flex; gap:12px; margin-bottom:18px; }
+  .kpi  { flex:1; background:#f8f9fa; border:1px solid #e0e0e0; border-radius:6px; padding:10px 14px; text-align:center; }
+  .kpi .val { font-size:22px; font-weight:700; color:#1a1a2e; }
+  .kpi .lbl { font-size:9px; color:#888; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+  .kpi.fin .val { color:#1D9E75; }
+  .kpi.cur .val { color:#EF9F27; }
+  .kpi.pen .val { color:#E24B4A; }
+  .kpi.vec .val { color:#C8102E; }
+  .row { margin-bottom:14px; background:#fff; border:1px solid #e0e0e0; border-radius:6px; overflow:hidden; }
+  .row-head { background:#f8f9fa; padding:8px 12px; border-bottom:1px solid #eee; }
+  .row-body { padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  .row-foot { background:#f8f9fa; padding:8px 12px; border-top:1px solid #eee; display:flex; flex-wrap:wrap; gap:12px; }
+  .field-block { }
+  .field-label { font-size:9px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+  .field-val { font-size:11px; color:#222; line-height:1.5; }
+  .foot-item { font-size:10px; color:#444; }
+  .foot-lbl { display:block; font-size:9px; color:#888; text-transform:uppercase; letter-spacing:.4px; margin-bottom:1px; }
+  .badge-est { display:inline-block; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:700; letter-spacing:.3px; }
+  .badge-tipo { display:inline-block; padding:1px 7px; border-radius:10px; font-size:9px; background:#e8eaf6; color:#3949ab; font-weight:600; }
+  .badge-crit { display:inline-block; padding:1px 7px; border-radius:10px; font-size:9px; background:#fce4ec; color:#c62828; font-weight:600; }
+  @media print {
+    body { padding:10px; }
+    .row { page-break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <h1>Plan de Acción SGI</h1>
+      <p>Generado: ${fecha} &nbsp;·&nbsp; Total hallazgos: ${total}</p>
+    </div>
+    <div class="header-logo">TG</div>
+  </div>
+  <div class="kpis">
+    <div class="kpi fin"><div class="val">${fin}</div><div class="lbl">Finalizados</div></div>
+    <div class="kpi cur"><div class="val">${cur}</div><div class="lbl">En Curso</div></div>
+    <div class="kpi pen"><div class="val">${pen}</div><div class="lbl">Pendientes</div></div>
+    <div class="kpi vec"><div class="val">${venc}</div><div class="lbl">Vencidos</div></div>
+    <div class="kpi"><div class="val">${total>0?Math.round(fin/total*100):0}%</div><div class="lbl">Cierre</div></div>
+  </div>
+  ${filas}
+</body>
+</html>`;
+
+  const w = window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>w.print(), 800);
+}
+
+function exportarPlanExcel() {
+  if(!filtrados.length){toast('Sin datos para exportar',2000);return;}
+  const headers = ['N° Hallazgo','Fecha','Empresa','Unidad Negocio','Sector','Dpto','Tipo','Origen','Responsable Directo','Descripción','Corrección','Acción Correctiva','Causa Raíz','Resp. Acción','F. Implementación','Estado Acción','Inf. Final','Verif. Eficacia','Obs. Verificación','Días Vto.','Alerta'];
+  const rows = filtrados.map(r=>{
+    const dias = diasR(r.fImpl);
+    const abierto = r.estAcc.trim()!=='FINALIZADO';
+    return [
+      r.nHall||'', fmtDate(r.fechaAud)||'', r.empresa||'', r.unNegocio||'', r.sector||'', r.depto||'',
+      r.tipoHallazgo||'', r.origen||'', r.respDir||'', r.desc||'', r.correccion||'', r.accionDesc||'',
+      r.causaRaiz||'', r.respAcc||'', fmtDate(r.fImpl)||'', r.estAcc||'', r.estCierre||'',
+      r.estVerif||'', r.obsVerif||'',
+      abierto&&dias!==null?dias:'',
+      abierto&&dias!==null&&dias<0?'VENCIDO':abierto&&dias!==null&&dias<=7?'PRÓXIMO':''
+    ];
+  });
+  let csv = [headers, ...rows].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Plan_Accion_SGI_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+  toast('✓ Excel exportado');
+}
+
 document.addEventListener('DOMContentLoaded', () => { inicializar(); setTimeout(initAutoResize, 800); });
 } else {
   inicializar();
