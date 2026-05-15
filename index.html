@@ -1907,23 +1907,42 @@ function verifColor(v) {
   return {bg:'#ccc',fg:'#555'};
 }
 
+function tipoOrder(t) {
+  const v = (t||'').toLowerCase();
+  if(v.includes('no conform')) return 0;
+  if(v.includes('observ'))     return 1;
+  if(v.includes('oportunidad')) return 2;
+  return 3;
+}
+function tipoColorPlan(t) {
+  const v = (t||'').toLowerCase();
+  if(v.includes('no conform'))  return {bg:'#E24B4A', fg:'#fff', bdr:'#E24B4A', hdr:'#fdf2f2'};
+  if(v.includes('observ'))      return {bg:'#378ADD', fg:'#fff', bdr:'#378ADD', hdr:'#f0f6ff'};
+  if(v.includes('oportunidad')) return {bg:'#888780', fg:'#fff', bdr:'#888780', hdr:'#f5f5f4'};
+  return {bg:'#534AB7', fg:'#fff', bdr:'#534AB7', hdr:'#f3f2fd'};
+}
+
 function renderPlan(data) {
   const cont = document.getElementById('plan-container');
   const sub  = document.getElementById('plan-subtitle');
   if(!data||!data.length){cont.innerHTML='<div class="empty">Sin datos para los filtros activos</div>';return;}
   sub.textContent = `${data.length} hallazgo${data.length!==1?'s':''} · Filtros activos`;
 
-  const rows = data.map((r,i) => {
+  // Ordenar: NC → OBS → OM
+  const sorted = [...data].sort((a,b) => tipoOrder(a.tipoHallazgo) - tipoOrder(b.tipoHallazgo));
+
+  const rows = sorted.map((r,i) => {
     const ec = estadoColor(r.estAcc);
     const vc = verifColor(r.estVerif);
+    const tc = tipoColorPlan(r.tipoHallazgo);
     const dias = diasR(r.fImpl);
     let vtoHtml = '—';
     if(r.estAcc.trim()!=='FINALIZADO' && dias!==null){
       const cls = dias<0?'#E24B4A':dias<=7?'#EF9F27':'#1D9E75';
       vtoHtml = `<span style="color:${cls};font-weight:700">${dias>=0?'+'+dias+'d':dias+'d'}</span>`;
     }
-    return `<div class="plan-row" style="border-left:4px solid ${ec.bg}">
-      <div class="plan-header">
+    return `<div class="plan-row" style="border-left:4px solid ${tc.bdr}">
+      <div class="plan-header" style="background:${tc.hdr}">
         <div class="plan-num">${r.nHall||'—'}</div>
         <div class="plan-meta">${fmtDate(r.fechaAud)} · ${r.empresa||'—'} · ${r.unNegocio||'—'}</div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1981,16 +2000,20 @@ function exportarPlanPDF() {
   const pen   = filtrados.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
   const venc  = filtrados.filter(r=>{const d=diasR(r.fImpl);return r.estAcc.trim()!=='FINALIZADO'&&d!==null&&d<0;}).length;
 
-  const filas = filtrados.map(r=>{
+  // Ordenar NC → OBS → OM
+  const dataSorted = [...filtrados].sort((a,b) => tipoOrder(a.tipoHallazgo) - tipoOrder(b.tipoHallazgo));
+
+  const filas = dataSorted.map(r=>{
     const dias = diasR(r.fImpl);
     const abierto = r.estAcc.trim()!=='FINALIZADO';
     let vtoTxt = '—';
     if(abierto&&dias!==null) vtoTxt = dias>=0?'+'+dias+'d':dias+'d (VENCIDO)';
     const ec = estadoColor(r.estAcc);
     const vc = verifColor(r.estVerif);
+    const tcPdf = tipoColorPlan(r.tipoHallazgo);
     return `
-    <div class="row" style="border-left:4px solid ${ec.bg};page-break-inside:avoid">
-      <div class="row-head">
+    <div class="row" style="border-left:4px solid ${tcPdf.bdr};page-break-inside:avoid">
+      <div class="row-head" style="background:${tcPdf.hdr}">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <strong style="font-size:13px;color:#1a1a2e">${r.nHall||'—'}</strong>
           <span style="font-size:10px;color:#666">${fmtDate(r.fechaAud)} · ${r.empresa||'—'} · ${r.unNegocio||'—'}</span>
