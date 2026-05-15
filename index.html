@@ -458,9 +458,9 @@ tbody tr:hover td{background:var(--surface2)}
 <div class="estado-popup" id="estado-popup">
   <div class="estado-popup-title" id="popup-title">Cambiar estado</div>
   <div id="popup-opts">
-    <div class="estado-opt" onclick="setEstado('FINALIZADO')"><span class="dot" style="background:#1D9E75"></span>Finalizado</div>
-    <div class="estado-opt" onclick="setEstado('EN CURSO')"><span class="dot" style="background:#EF9F27"></span>En curso</div>
-    <div class="estado-opt" onclick="setEstado('PENDIENTE')"><span class="dot" style="background:#E24B4A"></span>Pendiente</div>
+    <div class="estado-opt" onclick="setEstado('FINALIZADO',event)"><span class="dot" style="background:#1D9E75"></span>Finalizado</div>
+    <div class="estado-opt" onclick="setEstado('EN CURSO',event)"><span class="dot" style="background:#EF9F27"></span>En curso</div>
+    <div class="estado-opt" onclick="setEstado('PENDIENTE',event)"><span class="dot" style="background:#E24B4A"></span>Pendiente</div>
   </div>
 </div>
 
@@ -645,10 +645,10 @@ function openVerifPopup(e, rowId) {
   popupCtx = {rowId, campo: 'estVerif'};
   document.getElementById('popup-title').textContent = '4. Verificación eficacia';
   document.getElementById('popup-opts').innerHTML = `
-    <div class="estado-opt" onclick="setEstado('Verifica')"><span class="dot" style="background:#1D9E75"></span>Verifica</div>
-    <div class="estado-opt" onclick="setEstado('No Verifica')"><span class="dot" style="background:#E24B4A"></span>No Verifica</div>
-    <div class="estado-opt" onclick="setEstado('Verifica Con Observaciones')"><span class="dot" style="background:#EF9F27"></span>Verifica Con Observaciones</div>
-    <div class="estado-opt" onclick="setEstado('')"><span class="dot" style="background:#888780"></span>Limpiar</div>`;
+    <div class="estado-opt" onclick="setEstado('Verifica',event)"><span class="dot" style="background:#1D9E75"></span>Verifica</div>
+    <div class="estado-opt" onclick="setEstado('No Verifica',event)"><span class="dot" style="background:#E24B4A"></span>No Verifica</div>
+    <div class="estado-opt" onclick="setEstado('Verifica Con Observaciones',event)"><span class="dot" style="background:#EF9F27"></span>Verifica Con Observaciones</div>
+    <div class="estado-opt" onclick="setEstado('',event)"><span class="dot" style="background:#888780"></span>Limpiar</div>`;
   const popup = document.getElementById('estado-popup');
   const x = Math.min(e.clientX, window.innerWidth - 200);
   const y = Math.min(e.clientY + 8, window.innerHeight - 160);
@@ -660,9 +660,9 @@ function openVerifPopup(e, rowId) {
 function resetPopupOpts() {
   document.getElementById('popup-title').textContent = 'Cambiar estado';
   document.getElementById('popup-opts').innerHTML = `
-    <div class="estado-opt" onclick="setEstado('FINALIZADO')"><span class="dot" style="background:#1D9E75"></span>Finalizado</div>
-    <div class="estado-opt" onclick="setEstado('EN CURSO')"><span class="dot" style="background:#EF9F27"></span>En curso</div>
-    <div class="estado-opt" onclick="setEstado('PENDIENTE')"><span class="dot" style="background:#E24B4A"></span>Pendiente</div>`;
+    <div class="estado-opt" onclick="setEstado('FINALIZADO',event)"><span class="dot" style="background:#1D9E75"></span>Finalizado</div>
+    <div class="estado-opt" onclick="setEstado('EN CURSO',event)"><span class="dot" style="background:#EF9F27"></span>En curso</div>
+    <div class="estado-opt" onclick="setEstado('PENDIENTE',event)"><span class="dot" style="background:#E24B4A"></span>Pendiente</div>`;
 }
 
 async function saveField(rowId, campo, valor) {
@@ -1279,7 +1279,8 @@ function openEstadoPopup(e, rowId, campo) {
   popup.classList.add('open');
 }
 
-async function setEstado(nuevoValor) {
+async function setEstado(nuevoValor, ev) {
+  if(ev) { ev.stopPropagation(); ev.preventDefault(); }
   const popup = document.getElementById('estado-popup');
   popup.classList.remove('open');
   const {rowId, campo} = popupCtx;
