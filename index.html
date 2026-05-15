@@ -1075,6 +1075,14 @@ function restoreOpenBlocks(openIds) {
     const tog = document.getElementById('rtog-' + idx);
     if (block) block.classList.add('open');
     if (tog) tog.classList.add('open');
+    if (block) {
+      setTimeout(() => {
+        block.querySelectorAll('.edit-textarea, .edit-textarea-sm').forEach(ta => {
+          ta.style.height = 'auto';
+          ta.style.height = ta.scrollHeight + 'px';
+        });
+      }, 20);
+    }
   });
 }
 function renderResponsables(data){
@@ -1174,6 +1182,15 @@ function toggleRespBlock(idx, e){
   const isOpen=block.classList.contains('open');
   block.classList.toggle('open',!isOpen);
   tog.classList.toggle('open',!isOpen);
+  // Si se abrió, ajustar altura de textareas dentro del bloque
+  if(!isOpen && block) {
+    setTimeout(() => {
+      block.querySelectorAll('.edit-textarea, .edit-textarea-sm').forEach(ta => {
+        ta.style.height = 'auto';
+        ta.style.height = ta.scrollHeight + 'px';
+      });
+    }, 20);
+  }
 }
 
 // ─── TABLA ────────────────────────────────────────────────────────────────
