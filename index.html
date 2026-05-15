@@ -262,6 +262,9 @@ tbody tr:hover td{background:var(--surface2)}
 .edit-textarea{width:100%;min-height:60px;font-size:11px;font-family:inherit;color:var(--text);background:var(--surface);border:1px solid transparent;border-radius:var(--r);padding:4px 6px;resize:vertical;line-height:1.4;transition:border-color .15s}
 .edit-textarea:hover{border-color:var(--border2)}
 .edit-textarea:focus{border-color:var(--blue);outline:none;background:var(--surface2)}
+.edit-textarea-sm{width:100%;max-width:155px;min-height:44px;font-size:10px;font-family:inherit;color:var(--text);background:var(--surface);border:1px solid transparent;border-radius:var(--r);padding:4px 6px;resize:none;line-height:1.4;transition:border-color .15s;box-sizing:border-box}
+.edit-textarea-sm:hover{border-color:var(--border2)}
+.edit-textarea-sm:focus{border-color:var(--blue);outline:none;background:var(--surface2)}
 </style>
 </head>
 <body>
@@ -1126,7 +1129,7 @@ function renderResponsables(data){
           <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">4. Verif. eficacia</div>
           ${pillVerifEdit(r.estVerif, r.rowId)}
           <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">Obs. verificación</div>
-          <textarea class="edit-textarea" rows="2" style="margin-top:4px;width:150px;min-height:44px;max-width:150px;resize:none;font-size:10px" onclick="event.stopPropagation()" onfocus="event.stopPropagation()" onblur="saveField(${r.rowId},'obsVerif',this.value)" placeholder="Sin observación..." title="Editar observación verificación">${(r.obsVerif||'').replace(/['"<>]/g,'')}</textarea>
+          <textarea class="edit-textarea-sm" rows="2" style="margin-top:4px" onclick="event.stopPropagation()" onfocus="event.stopPropagation()" onblur="saveField(${r.rowId},'obsVerif',this.value)" placeholder="Sin observación..." title="Editar observación verificación">${(r.obsVerif||'').replace(/['"<>]/g,'')}</textarea>
           <div class="rhall-vto" style="margin-top:5px">${vtoHtml}</div>
         </div>
       </div>`;
