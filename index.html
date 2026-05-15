@@ -589,6 +589,12 @@ function switchTab(id,el){
   if(tabEl) tabEl.classList.add('active');
   if(id==='log' && SESSION && SESSION.rol==='admin') cargarLogSheet();
   if(id==='usuarios' && SESSION && SESSION.rol==='admin') cargarUsuariosSheet();
+  if(id==='responsables' && filtrados.length) {
+    const _open = getOpenBlocks();
+    renderResponsables(filtrados);
+    restoreOpenBlocks(_open);
+  }
+  if(id==='detalle' && filtrados.length) renderTabla(filtrados);
 }
 
 async function cargarLogSheet(){
@@ -675,6 +681,11 @@ async function saveField(rowId, campo, valor) {
   const rowF = filtrados.find(r => r.rowId === rowId);
   if (rowF) rowF[campo] = valor;
   registrarLog(row?.serialNumber, row?.nHall, campo, valorAnterior, valor);
+  // Re-renderizar ambas pestañas para mantener sincronía
+  const _open = getOpenBlocks();
+  renderResponsables(filtrados);
+  restoreOpenBlocks(_open);
+  renderTabla(filtrados);
   const serialNumber = row?.serialNumber;
   try {
     const p = new URLSearchParams({
