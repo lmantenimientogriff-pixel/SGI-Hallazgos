@@ -268,11 +268,11 @@ tbody tr:hover td{background:var(--surface2)}
 .plan-meta{font-size:10px;color:var(--text3)}
 .plan-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
 .plan-section{}
-.plan-label{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.plan-label{font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px}
 .plan-text{font-size:11px;color:var(--text);line-height:1.6;white-space:pre-wrap;word-break:break-word}
 .plan-footer{background:var(--surface2);padding:8px 14px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px}
 .plan-footer-item{display:flex;flex-direction:column;gap:2px;font-size:10px;color:var(--text)}
-.plan-footer-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px}
+.plan-footer-label{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px}
 .plan-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700}
 .edit-textarea-sm{width:100%;max-width:155px;min-height:44px;font-size:10px;font-family:inherit;color:var(--text);background:var(--surface);border:1px solid transparent;border-radius:var(--r);padding:4px 6px;resize:none;line-height:1.4;transition:border-color .15s;box-sizing:border-box}
 .edit-textarea-sm:hover{border-color:var(--border2)}
@@ -1947,7 +1947,7 @@ function renderPlan(data) {
         <div class="plan-meta">${fmtDate(r.fechaAud)} · ${r.empresa||'—'} · ${r.unNegocio||'—'}</div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <span class="pill ${r.tipoHallazgo?.toLowerCase().includes('conformidad')?'p-nc':r.tipoHallazgo?.toLowerCase().includes('observ')?'p-obs':'p-om'}">${r.tipoHallazgo||'—'}</span>
-          <span style="font-size:9px;color:var(--text3)">${r.origen||''}</span>
+          ${r.origen?`<span style="font-size:10px;font-weight:600;color:var(--text2)">${r.origen}</span>`:''}
         </div>
       </div>
       <div class="plan-body">
@@ -1973,6 +1973,8 @@ function renderPlan(data) {
       </div>
       <div class="plan-footer">
         <div class="plan-footer-item"><span class="plan-footer-label">Responsable</span><span>${r.respDir||'—'}</span></div>
+        <div class="plan-footer-item"><span class="plan-footer-label">Resp. Acción</span><span>${r.respAcc||'—'}</span></div>
+        <div class="plan-footer-item"><span class="plan-footer-label">Inf. Final</span><span>${r.estCierre||'—'}</span></div>
         <div class="plan-footer-item"><span class="plan-footer-label">F. Impl.</span><span>${fmtDate(r.fImpl)||'—'}</span></div>
         <div class="plan-footer-item"><span class="plan-footer-label">Vto.</span><span>${vtoHtml}</span></div>
         <div class="plan-footer-item">
@@ -2018,7 +2020,7 @@ function exportarPlanPDF() {
           <strong style="font-size:13px;color:#1a1a2e">${r.nHall||'—'}</strong>
           <span style="font-size:10px;color:#666">${fmtDate(r.fechaAud)} · ${r.empresa||'—'} · ${r.unNegocio||'—'}</span>
           <span class="badge-tipo">${r.tipoHallazgo||'—'}</span>
-          ${r.origen?`<span style="font-size:9px;color:#888">${r.origen}</span>`:''}
+          ${r.origen?`<span style="font-size:10px;font-weight:600;color:#444">${r.origen}</span>`:''}
 
         </div>
       </div>
@@ -2044,6 +2046,7 @@ function exportarPlanPDF() {
       <div class="row-foot">
         <div class="foot-item"><span class="foot-lbl">Responsable</span>${r.respDir||'—'}</div>
         <div class="foot-item"><span class="foot-lbl">Resp. Acción</span>${r.respAcc||'—'}</div>
+        <div class="foot-item"><span class="foot-lbl">Inf. Final</span>${r.estCierre||'—'}</div>
         <div class="foot-item"><span class="foot-lbl">F. Impl.</span>${fmtDate(r.fImpl)||'—'}</div>
         <div class="foot-item"><span class="foot-lbl">Vencimiento</span>${vtoTxt}</div>
         <div class="foot-item">
@@ -2054,7 +2057,7 @@ function exportarPlanPDF() {
           <span class="foot-lbl">Verif. Eficacia</span>
           <span class="badge-est" style="background:${vc.bg};color:${vc.fg}">${r.estVerif||'Sin verificar'}</span>
         </div>
-        ${r.estCierre?`<div class="foot-item"><span class="foot-lbl">Inf. Final</span>${r.estCierre}</div>`:''}
+
       </div>
     </div>`;
   }).join('');
@@ -2084,7 +2087,7 @@ function exportarPlanPDF() {
   .row-body { padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
   .row-foot { background:#f8f9fa; padding:8px 12px; border-top:1px solid #eee; display:flex; flex-wrap:wrap; gap:12px; }
   .field-block { }
-  .field-label { font-size:9px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+  .field-label { font-size:12px; font-weight:700; color:#333; margin-bottom:4px; }
   .field-val { font-size:11px; color:#222; line-height:1.5; }
   .foot-item { font-size:10px; color:#444; }
   .foot-lbl { display:block; font-size:9px; color:#888; text-transform:uppercase; letter-spacing:.4px; margin-bottom:1px; }
@@ -2101,7 +2104,7 @@ function exportarPlanPDF() {
   <div class="header">
     <div class="header-left">
       <h1>Plan de Acción SGI</h1>
-      <p>Generado: ${fecha} &nbsp;·&nbsp; Total hallazgos: ${total}</p>
+      <p>Generado: ${fecha} &nbsp;·&nbsp; Total hallazgos: ${total} &nbsp;·&nbsp; ${(()=>{const f=[];if(SEL.empresa.size)f.push('Empresa: '+[...SEL.empresa].join(', '));if(SEL.un.size)f.push('UN: '+[...SEL.un].join(', '));if(SEL.origen.size)f.push('Origen: '+[...SEL.origen].join(', '));if(SEL.tipo.size)f.push('Tipo: '+[...SEL.tipo].join(', '));if(SEL.estacc.size)f.push('Estado: '+[...SEL.estacc].join(', '));return f.length?f.join(' | '):'Sin filtros activos';})()}</p>
     </div>
     <div class="header-logo">TG</div>
   </div>
@@ -2142,7 +2145,9 @@ function exportarPlanExcel() {
   const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'Plan_Accion_SGI_'+new Date().toISOString().split('T')[0]+'.csv';
+  const _orStr = SEL.origen.size?'_'+[...SEL.origen][0].replace(/[^a-zA-Z0-9]/g,'').substring(0,20):'';
+  const _empStr = SEL.empresa.size?'_'+[...SEL.empresa][0].replace(/[^a-zA-Z0-9]/g,'').substring(0,15):'';
+  a.download = 'Plan_Accion_SGI'+_empStr+_orStr+'_'+new Date().toISOString().split('T')[0]+'.csv';
   a.click();
   toast('✓ Excel exportado');
 }
