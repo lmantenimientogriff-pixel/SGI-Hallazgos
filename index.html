@@ -395,6 +395,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="tab" onclick="switchTab('responsables',this)"><i class="ti ti-users" style="font-size:12px"></i> Responsables</div>
     <div class="tab" onclick="switchTab('detalle',this)"><i class="ti ti-table" style="font-size:12px"></i> Detalle</div>
     <div class="tab" onclick="switchTab('plan',this)"><i class="ti ti-file-description" style="font-size:12px"></i> Plan de Acción</div>
+    <div class="tab" onclick="switchTab('verificaciones',this)"><i class="ti ti-eye-check" style="font-size:12px"></i> Verificaciones</div>
     <div class="tab" id="tab-log-btn" onclick="switchTab('log',this)" style="display:none"><i class="ti ti-history" style="font-size:12px"></i> Log de cambios</div>
     <div class="tab" id="tab-usr-btn" onclick="switchTab('usuarios',this)" style="display:none"><i class="ti ti-users" style="font-size:12px"></i> Usuarios</div>
   </div>
@@ -493,6 +494,19 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
     </div>
     <div id="plan-container"></div>
+  </div>
+  <div class="tcontent" id="tab-verificaciones">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">Verificaciones Pendientes</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px" id="verif-subtitle">Hallazgos que requieren verificación</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-green" onclick="exportarVerifPDF()"><i class="ti ti-file-text"></i> Exportar PDF</button>
+      </div>
+    </div>
+    <div id="verif-kpis" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div>
+    <div id="verif-container"></div>
   </div>
   <div class="tcontent" id="tab-log">
     <div class="tbl-card">
@@ -622,6 +636,7 @@ function switchTab(id,el){
   }
   if(id==='detalle' && filtrados.length) renderTabla(filtrados);
   if(id==='plan' && filtrados.length) renderPlan(filtrados);
+  if(id==='verificaciones') renderVerificaciones(filtrados);
 }
 
 async function cargarLogSheet(){
@@ -995,6 +1010,7 @@ function renderTodo(){
   document.getElementById('fcount').textContent=`${total} registros`;
   renderCharts(data);renderResponsables(data);renderTabla(data);
   if(document.getElementById('tab-plan')?.classList.contains('active')) renderPlan(data);
+  if(document.getElementById('tab-verificaciones')?.classList.contains('active')) renderVerificaciones(data);
   setTimeout(initAutoResize,100);
 }
 
@@ -1139,7 +1155,7 @@ function renderResponsables(data){
   });
 
   // ordenar: más abiertos primero
-  const sorted=Object.entries(mapa).sort((a,b)=>(b[1].pen+b[1].cur)-(a[1].pen+a[1].cur));
+  const sorted=Object.entries(mapa).sort((a,b)=>a[0].localeCompare(b[0],'es',{sensitivity:'base'}));
 
   document.getElementById('resp-list').innerHTML=sorted.map(([nombre,s],idx)=>{
     const n2=nombre.split(' ').slice(0,3).join(' ');
@@ -2150,6 +2166,225 @@ function exportarPlanExcel() {
   a.download = 'Plan_Accion_SGI'+_empStr+_orStr+'_'+new Date().toISOString().split('T')[0]+'.csv';
   a.click();
   toast('✓ Excel exportado');
+}
+
+
+// ─── VERIFICACIONES ──────────────────────────────────────────────────────────
+
+function renderVerificaciones(data) {
+  const cont = document.getElementById('verif-container');
+  const sub  = document.getElementById('verif-subtitle');
+  const kpis = document.getElementById('verif-kpis');
+  if(!cont) return;
+
+  // Filtrar: Sin verificar, No Verifica, Verifica Con Observaciones
+  const estados = ['sin verificar','no verifica','verifica con observaciones'];
+  const filtered = data.filter(r => {
+    const v = (r.estVerif||'').trim().toLowerCase();
+    return estados.some(e => v.includes(e) || v === e) || v === '' || v === '—';
+  });
+
+  // KPIs
+  const sv  = filtered.filter(r => !(r.estVerif||'').trim() || (r.estVerif||'').trim().toLowerCase()==='sin verificar' || (r.estVerif||'').trim()==='—').length;
+  const nv  = filtered.filter(r => (r.estVerif||'').trim().toLowerCase()==='no verifica').length;
+  const vco = filtered.filter(r => (r.estVerif||'').trim().toLowerCase().includes('con observ')).length;
+
+  kpis.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 16px;text-align:center;min-width:100px">
+      <div style="font-size:20px;font-weight:700;color:var(--text)">${filtered.length}</div>
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Total</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 16px;text-align:center;min-width:100px">
+      <div style="font-size:20px;font-weight:700;color:#888780">${sv}</div>
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Sin Verificar</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 16px;text-align:center;min-width:100px">
+      <div style="font-size:20px;font-weight:700;color:#E24B4A">${nv}</div>
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">No Verifica</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 16px;text-align:center;min-width:100px">
+      <div style="font-size:20px;font-weight:700;color:#EF9F27">${vco}</div>
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Verifica c/Obs.</div>
+    </div>`;
+
+  sub.textContent = `${filtered.length} hallazgo${filtered.length!==1?'s':''} requieren atención`;
+
+  if(!filtered.length){
+    cont.innerHTML='<div class="empty" style="padding:40px;text-align:center">✓ No hay hallazgos pendientes de verificación</div>';
+    return;
+  }
+
+  // Ordenar: No Verifica → Verifica Con Obs → Sin Verificar, luego alfabético por responsable
+  const verifOrder = v => {
+    const t = (v||'').trim().toLowerCase();
+    if(t==='no verifica') return 0;
+    if(t.includes('con observ')) return 1;
+    return 2;
+  };
+  const sorted = [...filtered].sort((a,b) => {
+    const vo = verifOrder(a.estVerif) - verifOrder(b.estVerif);
+    if(vo !== 0) return vo;
+    return (a.respDir||'').localeCompare(b.respDir||'','es',{sensitivity:'base'});
+  });
+
+  const verifBadgeColor = v => {
+    const t = (v||'').trim().toLowerCase();
+    if(t==='no verifica') return {bg:'#E24B4A',fg:'#fff'};
+    if(t.includes('con observ')) return {bg:'#EF9F27',fg:'#fff'};
+    return {bg:'#888780',fg:'#fff'};
+  };
+
+  const rows = sorted.map(r => {
+    const vc = verifBadgeColor(r.estVerif);
+    const tc = tipoColorPlan(r.tipoHallazgo);
+    const ec = estadoColor(r.estAcc);
+    const dias = diasR(r.fImpl);
+    let vtoHtml = '—';
+    if(r.estAcc.trim()!=='FINALIZADO'&&dias!==null){
+      const col = dias<0?'#E24B4A':dias<=7?'#EF9F27':'#1D9E75';
+      vtoHtml = `<span style="color:${col};font-weight:700">${dias>=0?'+'+dias+'d':dias+'d'}</span>`;
+    }
+    return `<div class="plan-row" style="border-left:4px solid ${vc.bg}">
+      <div class="plan-header" style="background:${tc.hdr}">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+          <div>
+            <span class="plan-num">${r.nHall||'—'}</span>
+            <span style="font-size:10px;color:var(--text3);margin-left:8px">${fmtDate(r.fechaAud)} · ${r.empresa||'—'} · ${r.unNegocio||'—'}</span>
+          </div>
+          <span class="plan-badge" style="background:${vc.bg};color:${vc.fg};font-size:10px;padding:3px 10px">${r.estVerif||'Sin verificar'}</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px">
+          <span class="pill ${r.tipoHallazgo?.toLowerCase().includes('conformidad')?'p-nc':r.tipoHallazgo?.toLowerCase().includes('observ')?'p-obs':'p-om'}">${r.tipoHallazgo||'—'}</span>
+          ${r.origen?`<span style="font-size:10px;font-weight:600;color:var(--text2)">${r.origen}</span>`:''}
+        </div>
+      </div>
+      <div class="plan-body">
+        <div class="plan-section">
+          <div class="plan-label">Descripción</div>
+          <div class="plan-text">${r.desc||'—'}</div>
+        </div>
+        <div class="plan-section">
+          <div class="plan-label">Acción Correctiva</div>
+          <div class="plan-text">${r.accionDesc||'Sin acción registrada'}</div>
+        </div>
+        ${r.obsVerif?`<div class="plan-section">
+          <div class="plan-label">Obs. Verificación</div>
+          <div class="plan-text">${r.obsVerif}</div>
+        </div>`:''}
+      </div>
+      <div class="plan-footer">
+        <div class="plan-footer-item"><span class="plan-footer-label">Responsable</span><span>${r.respDir||'—'}</span></div>
+        <div class="plan-footer-item"><span class="plan-footer-label">Resp. Acción</span><span>${r.respAcc||'—'}</span></div>
+        <div class="plan-footer-item"><span class="plan-footer-label">F. Impl.</span><span>${fmtDate(r.fImpl)||'—'}</span></div>
+        <div class="plan-footer-item"><span class="plan-footer-label">Vto.</span><span>${vtoHtml}</span></div>
+        <div class="plan-footer-item">
+          <span class="plan-footer-label">Estado Acción</span>
+          <span class="plan-badge" style="background:${ec.bg};color:${ec.fg}">${r.estAcc||'—'}</span>
+        </div>
+        <div class="plan-footer-item"><span class="plan-footer-label">Inf. Final</span><span>${r.estCierre||'—'}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  cont.innerHTML = rows;
+}
+
+function exportarVerifPDF() {
+  if(!filtrados.length){toast('Sin datos para exportar',2000);return;}
+  const estados = ['sin verificar','no verifica','verifica con observaciones'];
+  const filtered = filtrados.filter(r => {
+    const v = (r.estVerif||'').trim().toLowerCase();
+    return estados.some(e => v.includes(e) || v === e) || v === '' || v === '—';
+  });
+  if(!filtered.length){toast('No hay hallazgos pendientes de verificación',2500);return;}
+
+  const verifOrder = v => { const t=(v||'').trim().toLowerCase(); if(t==='no verifica')return 0; if(t.includes('con observ'))return 1; return 2; };
+  const sorted = [...filtered].sort((a,b)=>{ const vo=verifOrder(a.estVerif)-verifOrder(b.estVerif); return vo!==0?vo:(a.respDir||'').localeCompare(b.respDir||'','es',{sensitivity:'base'}); });
+
+  const fecha = new Date().toLocaleDateString('es-AR');
+  const sv  = filtered.filter(r=>!(r.estVerif||'').trim()||(r.estVerif||'').trim().toLowerCase()==='sin verificar').length;
+  const nv  = filtered.filter(r=>(r.estVerif||'').trim().toLowerCase()==='no verifica').length;
+  const vco = filtered.filter(r=>(r.estVerif||'').trim().toLowerCase().includes('con observ')).length;
+
+  const filas = sorted.map(r=>{
+    const vc = r.estVerif?.toLowerCase()==='no verifica'?{bg:'#E24B4A',fg:'#fff'}:r.estVerif?.toLowerCase().includes('con observ')?{bg:'#EF9F27',fg:'#fff'}:{bg:'#888780',fg:'#fff'};
+    const tc = tipoColorPlan(r.tipoHallazgo);
+    const ec = estadoColor(r.estAcc);
+    const dias = diasR(r.fImpl);
+    const vtoTxt = r.estAcc.trim()!=='FINALIZADO'&&dias!==null?(dias>=0?'+'+dias+'d':dias+'d (VENCIDO)'):'—';
+    return `<div class="row" style="border-left:4px solid ${vc.bg};page-break-inside:avoid">
+      <div class="row-head" style="background:${tc.hdr};display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px">
+        <div>
+          <strong style="font-size:13px;color:#1a1a2e">${r.nHall||'—'}</strong>
+          <span style="font-size:10px;color:#666;margin-left:8px">${fmtDate(r.fechaAud)} · ${r.empresa||'—'} · ${r.unNegocio||'—'}</span>
+          <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
+            <span class="badge-tipo">${r.tipoHallazgo||'—'}</span>
+            ${r.origen?`<span style="font-size:10px;font-weight:600;color:#444">${r.origen}</span>`:''}
+          </div>
+        </div>
+        <span class="badge-est" style="background:${vc.bg};color:${vc.fg}">${r.estVerif||'Sin verificar'}</span>
+      </div>
+      <div class="row-body">
+        <div class="field-block"><div class="field-label">Descripción</div><div class="field-val">${r.desc||'—'}</div></div>
+        <div class="field-block"><div class="field-label">Acción Correctiva</div><div class="field-val">${r.accionDesc||'Sin acción registrada'}</div></div>
+        ${r.obsVerif?`<div class="field-block"><div class="field-label">Obs. Verificación</div><div class="field-val">${r.obsVerif}</div></div>`:''}
+      </div>
+      <div class="row-foot">
+        <div class="foot-item"><span class="foot-lbl">Responsable</span>${r.respDir||'—'}</div>
+        <div class="foot-item"><span class="foot-lbl">Resp. Acción</span>${r.respAcc||'—'}</div>
+        <div class="foot-item"><span class="foot-lbl">F. Impl.</span>${fmtDate(r.fImpl)||'—'}</div>
+        <div class="foot-item"><span class="foot-lbl">Vencimiento</span>${vtoTxt}</div>
+        <div class="foot-item"><span class="foot-lbl">Estado Acción</span><span class="badge-est" style="background:${ec.bg};color:${ec.fg}">${r.estAcc||'—'}</span></div>
+        <div class="foot-item"><span class="foot-lbl">Inf. Final</span>${r.estCierre||'—'}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Verificaciones SGI</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:11px;color:#1a1a2e;background:#fff;padding:20px}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:12px;border-bottom:3px solid #C8102E}
+  .header-left h1{font-size:18px;font-weight:700;color:#1a1a2e}
+  .header-left p{font-size:10px;color:#666;margin-top:3px}
+  .header-logo{font-size:22px;font-weight:900;color:#C8102E;letter-spacing:-1px}
+  .kpis{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  .kpi{flex:1;min-width:80px;background:#f8f9fa;border:1px solid #e0e0e0;border-radius:6px;padding:10px 14px;text-align:center}
+  .kpi .val{font-size:22px;font-weight:700;color:#1a1a2e}
+  .kpi .lbl{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+  .row{margin-bottom:14px;background:#fff;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden}
+  .row-head{padding:8px 12px;border-bottom:1px solid #eee}
+  .row-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+  .row-foot{background:#f8f9fa;padding:8px 12px;border-top:1px solid #eee;display:flex;flex-wrap:wrap;gap:12px}
+  .field-label{font-size:12px;font-weight:700;color:#333;margin-bottom:4px}
+  .field-val{font-size:11px;color:#222;line-height:1.5}
+  .foot-item{font-size:10px;color:#444}
+  .foot-lbl{display:block;font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px}
+  .badge-est{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;letter-spacing:.3px}
+  .badge-tipo{display:inline-block;padding:1px 7px;border-radius:10px;font-size:9px;background:#e8eaf6;color:#3949ab;font-weight:600}
+  @media print{body{padding:10px}.row{page-break-inside:avoid}}
+</style></head><body>
+  <div class="header">
+    <div class="header-left">
+      <h1>Verificaciones Pendientes SGI</h1>
+      <p>Generado: ${fecha} &nbsp;·&nbsp; Total: ${filtered.length} hallazgos</p>
+    </div>
+    <div class="header-logo">TG</div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="val" style="color:#888780">${sv}</div><div class="lbl">Sin Verificar</div></div>
+    <div class="kpi"><div class="val" style="color:#E24B4A">${nv}</div><div class="lbl">No Verifica</div></div>
+    <div class="kpi"><div class="val" style="color:#EF9F27">${vco}</div><div class="lbl">Verifica c/Obs.</div></div>
+    <div class="kpi"><div class="val">${filtered.length}</div><div class="lbl">Total</div></div>
+  </div>
+  ${filas}
+</body></html>`;
+
+  const w = window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>w.print(), 800);
 }
 
 document.addEventListener('DOMContentLoaded', () => { inicializar(); setTimeout(initAutoResize, 800); });
