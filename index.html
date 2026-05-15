@@ -1095,7 +1095,7 @@ function renderResponsables(data){
           <div class="rhall-desc">${r.desc||'Sin descripción'}</div>
           <div class="rhall-accion">
             <div class="rhall-accion-label">Acción correctiva</div>
-            <textarea class="edit-textarea" rows="3" style="margin-top:4px" onblur="saveField(${r.rowId},'accionDesc',this.value)" title="Editar acción correctiva">${(r.accionDesc||'').replace(/['"<>]/g,'')}</textarea>
+            <textarea class="edit-textarea" rows="3" style="margin-top:4px" onclick="event.stopPropagation()" onfocus="event.stopPropagation()" onblur="saveField(${r.rowId},'accionDesc',this.value)" title="Editar acción correctiva">${(r.accionDesc||'').replace(/['"<>]/g,'')}</textarea>
           </div>
         </div>
         <div class="rhall-status">
@@ -1134,11 +1134,17 @@ function renderResponsables(data){
 }
 
 function toggleRespBlock(idx, e){
-  // No cerrar si el click viene de un elemento editable
+  // No cerrar si el click viene de un elemento editable o interactivo
   if(e && e.target && (
     e.target.closest('.pill-btn') ||
     e.target.closest('.edit-date') ||
-    e.target.closest('.estado-popup')
+    e.target.closest('.estado-popup') ||
+    e.target.closest('.edit-textarea') ||
+    e.target.closest('textarea') ||
+    e.target.closest('input') ||
+    e.target.closest('select') ||
+    e.target.closest('.ms-trigger') ||
+    e.target.closest('.ms-drop')
   )) return;
   const block=document.getElementById('rh-'+idx);
   const tog=document.getElementById('rtog-'+idx);
@@ -1197,7 +1203,7 @@ function renderTabla(data){
       <td style="font-size:10px">${rn||'—'}</td>
             <td style="font-size:11px;min-width:220px;max-width:320px;white-space:pre-wrap;word-break:break-word;line-height:1.4">${sd}</td>
       <td style="min-width:220px;max-width:320px">
-        <textarea class="edit-textarea" rows="3" onblur="saveField(${r.rowId},'accionDesc',this.value)" title="Editar acción correctiva">${(r.accionDesc||'').replace(/['"]/g,'')}</textarea>
+        <textarea class="edit-textarea" rows="3" onclick="event.stopPropagation()" onfocus="event.stopPropagation()" onblur="saveField(${r.rowId},'accionDesc',this.value)" title="Editar acción correctiva">${(r.accionDesc||'').replace(/['"]/g,'')}</textarea>
       </td>
       <td style="white-space:nowrap">${fmtDate(r.fMaxCorr)}${vencBadge}</td>
       <td>${fImplCorrInput}</td>
