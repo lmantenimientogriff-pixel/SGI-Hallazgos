@@ -259,7 +259,7 @@ tbody tr:hover td{background:var(--surface2)}
 .usr-search input{flex:1;font-size:12px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none}
 
 /* TEXTAREA EDITABLE EN TABLA */
-.edit-textarea{width:100%;min-height:60px;font-size:11px;font-family:inherit;color:var(--text);background:var(--surface);border:1px solid transparent;border-radius:var(--r);padding:4px 6px;resize:vertical;line-height:1.4;transition:border-color .15s}
+.edit-textarea{width:100%;min-height:36px;font-size:11px;font-family:inherit;color:var(--text);background:var(--surface);border:1px solid transparent;border-radius:var(--r);padding:4px 6px;resize:none;line-height:1.4;transition:border-color .15s;overflow:hidden}
 .edit-textarea:hover{border-color:var(--border2)}
 .edit-textarea:focus{border-color:var(--blue);outline:none;background:var(--surface2)}
 .edit-textarea-sm{width:100%;max-width:155px;min-height:44px;font-size:10px;font-family:inherit;color:var(--text);background:var(--surface);border:1px solid transparent;border-radius:var(--r);padding:4px 6px;resize:none;line-height:1.4;transition:border-color .15s;box-sizing:border-box}
@@ -955,7 +955,7 @@ function renderTodo(){
   document.getElementById('k-av').textContent=av+'%';
   document.getElementById('k-bar').style.width=av+'%';
   document.getElementById('fcount').textContent=`${total} registros`;
-  renderCharts(data);renderResponsables(data);renderTabla(data);
+  renderCharts(data);renderResponsables(data);renderTabla(data);setTimeout(initAutoResize,100);
 }
 
 // ─── CHARTS ───────────────────────────────────────────────────────────────
@@ -1321,6 +1321,7 @@ async function setEstado(nuevoValor, ev) {
   const _openBlocks = getOpenBlocks();
   renderResponsables(filtrados);
   restoreOpenBlocks(_openBlocks);
+  setTimeout(initAutoResize, 50);
   toast('Guardando...', 1500);
   try {
     const rowE = rawData.find(r => r.rowId === rowId);
@@ -1813,7 +1814,18 @@ async function inicializar(){
 
 // Iniciar al cargar cuando el DOM esté listo
 if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', inicializar);
+  
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+function initAutoResize() {
+  document.querySelectorAll('.edit-textarea, .edit-textarea-sm').forEach(ta => {
+    autoResize(ta);
+    ta.addEventListener('input', () => autoResize(ta));
+  });
+}
+document.addEventListener('DOMContentLoaded', () => { inicializar(); setTimeout(initAutoResize, 800); });
 } else {
   inicializar();
 }
