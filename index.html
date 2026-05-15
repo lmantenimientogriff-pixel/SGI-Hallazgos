@@ -1245,8 +1245,8 @@ function renderTabla(data){
     const rn=r.respDir.split(' ').slice(0,2).join(' ');
     const fImplCorrInput=`<input type="date" class="edit-date" value="${r.fImplCorr?String(r.fImplCorr).split('T')[0]:''}" onchange="saveField(${r.rowId},'fImplCorr',this.value)" title="Fecha impl. corrección">`;
     const fImplAccInput=`<input type="date" class="edit-date" value="${r.fImpl?String(r.fImpl).split('T')[0]:''}" onchange="saveField(${r.rowId},'fImpl',this.value)" title="Fecha impl. acción correctiva">`;
-    const obsVal=(r.obsVerif||'').replace(/['"]/g,'');
-    const obsVerifInput='<input type="text" class="edit-date" style="width:130px" value="'+obsVal+'" onblur="saveField('+r.rowId+',\'obsVerif\',this.value)" placeholder="Observación..." title="Obs. verificación">';
+    const obsVal=(r.obsVerif||'').replace(/['"<>]/g,'');
+    const obsVerifInput=`<textarea class="edit-textarea" rows="2" onclick="event.stopPropagation()" onfocus="event.stopPropagation()" onblur="saveField(${r.rowId},'obsVerif',this.value)" placeholder="Sin observación..." title="Obs. verificación">${obsVal}</textarea>`;
     return`<tr>
       <td><strong>${id}</strong></td>
       <td style="white-space:nowrap">${fmtDate(r.fechaAud)}</td>
@@ -1270,6 +1270,12 @@ function renderTabla(data){
   document.getElementById('tbody-main').innerHTML=rows||'<tr><td colspan="15" class="empty">Sin resultados para los filtros seleccionados</td></tr>';
   if(SESSION&&SESSION.rol==='lectura'){document.querySelectorAll('.pill-btn').forEach(b=>b.disabled=true);document.querySelectorAll('.edit-date').forEach(i=>i.disabled=true);}
   initScrollSync();
+  setTimeout(()=>{
+    document.querySelectorAll('#tbody-main .edit-textarea').forEach(ta=>{
+      ta.style.height='auto';
+      ta.style.height=ta.scrollHeight+'px';
+    });
+  }, 20);
 }
 
 // ─── EXPORTAR ─────────────────────────────────────────────────────────────
