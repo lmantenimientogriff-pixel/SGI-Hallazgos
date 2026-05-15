@@ -145,7 +145,7 @@ button.btn-red{background:var(--red-bg);color:var(--red-text);border-color:var(-
 .rhall-desc{font-size:11px;color:var(--text);line-height:1.5}
 .rhall-accion{font-size:11px;color:var(--text2);line-height:1.5;padding:6px 10px;background:var(--surface2);border-left:3px solid var(--blue);border-radius:0 4px 4px 0;margin-top:2px}
 .rhall-accion-label{font-size:10px;font-weight:700;color:var(--blue-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
-.rhall-status{display:flex;flex-direction:column;gap:5px;align-items:flex-end;min-width:100px}
+.rhall-status{display:flex;flex-direction:column;gap:5px;align-items:flex-end;min-width:160px;width:160px}
 .rhall-vto{font-size:10px;font-weight:600}
 
 /* TABLE */
@@ -1126,7 +1126,7 @@ function renderResponsables(data){
           <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">4. Verif. eficacia</div>
           ${pillVerifEdit(r.estVerif, r.rowId)}
           <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">Obs. verificación</div>
-          <textarea class="edit-textarea" rows="2" style="margin-top:4px" onclick="event.stopPropagation()" onfocus="event.stopPropagation()" onblur="saveField(${r.rowId},'obsVerif',this.value)" placeholder="Sin observación..." title="Editar observación verificación">${(r.obsVerif||'').replace(/['"<>]/g,'')}</textarea>
+          <textarea class="edit-textarea" rows="2" style="margin-top:4px;width:150px;min-height:44px;max-width:150px;resize:none;font-size:10px" onclick="event.stopPropagation()" onfocus="event.stopPropagation()" onblur="saveField(${r.rowId},'obsVerif',this.value)" placeholder="Sin observación..." title="Editar observación verificación">${(r.obsVerif||'').replace(/['"<>]/g,'')}</textarea>
           <div class="rhall-vto" style="margin-top:5px">${vtoHtml}</div>
         </div>
       </div>`;
