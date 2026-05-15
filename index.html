@@ -257,6 +257,11 @@ tbody tr:hover td{background:var(--surface2)}
 .usr-modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 .usr-search{display:flex;gap:8px;margin-bottom:12px}
 .usr-search input{flex:1;font-size:12px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none}
+
+/* TEXTAREA EDITABLE EN TABLA */
+.edit-textarea{width:100%;min-height:60px;font-size:11px;font-family:inherit;color:var(--text);background:var(--surface);border:1px solid transparent;border-radius:var(--r);padding:4px 6px;resize:vertical;line-height:1.4;transition:border-color .15s}
+.edit-textarea:hover{border-color:var(--border2)}
+.edit-textarea:focus{border-color:var(--blue);outline:none;background:var(--surface2)}
 </style>
 </head>
 <body>
@@ -293,7 +298,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div style="margin-bottom:4px"><span class="logo-badge">GRIFFOULIERE</span><span style="font-size:11px;color:var(--text3)">Sistema de Gestión Integrado</span></div>
       <h1>Tablero de Hallazgos SGI</h1>
       <div class="sub" id="subtitle">Cargando...</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">00</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">12/05/2026</strong></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">REV: <strong style="color:var(--text2)">01</strong> &nbsp;·&nbsp; FECHA: <strong style="color:var(--text2)">15/05/2026</strong></div>
     </div>
     <div class="hactions">
       <button onclick="recargar()"><i class="ti ti-refresh"></i> Actualizar</button>
@@ -382,7 +387,7 @@ tbody tr:hover td{background:var(--surface2)}
   <div class="tcontent active" id="tab-graficos">
     <div class="charts">
       <div class="chart-card"><div class="ct">1. Estado corrección (Col. U)</div><div style="position:relative;height:200px"><canvas id="c-estcorr" role="img" aria-label="Estado correcciones"></canvas></div></div>
-      <div class="chart-card"><div class="ct">2. Estado cierre hallazgo (Col. BL)</div><div style="position:relative;height:200px"><canvas id="c-estcierre" role="img" aria-label="Estado cierre hallazgo"></canvas></div></div>
+      <div class="chart-card"><div class="ct">2. Informe Final de Hallazgo (Col. BL)</div><div style="position:relative;height:200px"><canvas id="c-estcierre" role="img" aria-label="Estado cierre hallazgo"></canvas></div></div>
       <div class="chart-card"><div class="ct">3. Estado acción correctiva (Col. AC)</div><div style="position:relative;height:200px"><canvas id="c-estacc" role="img" aria-label="Estado acciones"></canvas></div></div>
       <div class="chart-card"><div class="ct">4. Verificación de eficacia</div><div style="position:relative;height:200px"><canvas id="c-estverif" role="img" aria-label="Verificación eficacia"></canvas></div></div>
       <div class="chart-card"><div class="ct">Hallazgos por departamento (top 8)</div><div style="position:relative;height:200px"><canvas id="c-depto" role="img" aria-label="Por departamento"></canvas></div></div>
@@ -420,7 +425,7 @@ tbody tr:hover td{background:var(--surface2)}
             <th onclick="ordenar('fMaxCorr')">F.Máx.Correc. <span id="s-fMaxCorr">↕</span></th>
             <th>F.Impl.Correc.</th>
             <th onclick="ordenar('estCorr')">1. Corrección <span id="s-estCorr">↕</span></th>
-            <th onclick="ordenar('estCierre')">2. Cierre Hallazgo <span id="s-estCierre">↕</span></th>
+            <th onclick="ordenar('estCierre')">2. Inf. Final Hallazgo <span id="s-estCierre">↕</span></th>
             <th>F.Impl.Acción</th>
             <th onclick="ordenar('estAcc')">3. Acción Correctiva <span id="s-estAcc">↕</span></th>
             <th onclick="ordenar('estVerif')">4. Verif.Eficacia <span id="s-estVerif">↕</span></th>
@@ -624,10 +629,15 @@ function pillEstado(e){
 
 
 function pillVerifEdit(val, rowId) {
-  const map = {'Verifica':'p-fin','No Verifica':'p-nc','Verifica Con Observaciones':'p-cur'};
-  const cls = map[val] || 'p-obs';
+  const map = {'VERIFICA':'p-fin','NO VERIFICA':'p-nc','VERIFICA CON OBSERVACIONES':'p-cur'};
+  const v = (val||'').toUpperCase();
+  const cls = map[v] || 'p-obs';
   const label = val || '—';
-  return `<button class="pill ${cls} pill-btn" onclick="openVerifPopup(event,${rowId})" title="Click para cambiar">${label} ✎</button>`;
+  // Solo Admin puede editar verificación de eficacia
+  if(SESSION && SESSION.rol === 'admin'){
+    return `<button class="pill ${cls} pill-btn" onclick="openVerifPopup(event,${rowId})" title="Click para cambiar">${label} ✎</button>`;
+  }
+  return `<span class="pill ${cls}">${label}</span>`;
 }
 
 function openVerifPopup(e, rowId) {
@@ -685,9 +695,9 @@ function pillEstadoEdit(val, campo, rowId) {
 }
 
 function pillCierre(e){
-  if(!e||e.trim()==='')return'<span class="pill p-pen">Pendiente</span>';
+  if(!e||e.trim()==='')return'<span class="pill p-pen">Sin inf. final</span>';
   const t=e.trim().toUpperCase();
-  if(t==='CERRADO')return'<span class="pill p-fin">Cerrado</span>';
+  if(t==='CERRADO')return'<span class="pill p-fin">Con inf. final</span>';
   return'<span class="pill p-pen">Pendiente</span>';
 }
 function pillTipo(t){
@@ -1085,25 +1095,27 @@ function renderResponsables(data){
           <div class="rhall-desc">${r.desc||'Sin descripción'}</div>
           <div class="rhall-accion">
             <div class="rhall-accion-label">Acción correctiva</div>
-            ${accion}
+            <textarea class="edit-textarea" rows="3" style="margin-top:4px" onblur="saveField(${r.rowId},'accionDesc',this.value)" title="Editar acción correctiva">${(r.accionDesc||'').replace(/['"<>]/g,'')}</textarea>
           </div>
         </div>
         <div class="rhall-status">
           <div style="font-size:9px;color:var(--text3);margin-bottom:2px">1. Corrección</div>
           ${pillEstadoEdit(r.estCorr,'estCorr',r.rowId)}
-          <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">2. Cierre hallazgo</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">2. Inf. Final Hallazgo</div>
           ${pillCierre(r.estCierre)}
           <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">3. Acción correctiva</div>
           ${pillEstadoEdit(r.estAcc,'estAcc',r.rowId)}
           <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">4. Verif. eficacia</div>
-          <div style="font-size:10px;color:var(--text2)">${r.estVerif||'—'}</div>
+          ${pillVerifEdit(r.estVerif, r.rowId)}
+          <div style="font-size:9px;color:var(--text3);margin-top:5px;margin-bottom:2px">Obs. verificación</div>
+          <div style="font-size:10px;color:var(--text2);font-style:${r.obsVerif?'normal':'italic'}">${r.obsVerif||'—'}</div>
           <div class="rhall-vto" style="margin-top:5px">${vtoHtml}</div>
         </div>
       </div>`;
     }).join('');
 
     return`<div class="resp-block">
-      <div class="resp-block-header" onclick="toggleRespBlock(${idx})">
+      <div class="resp-block-header" onclick="toggleRespBlock(${idx}, event)">
         <div class="rav">${initials(nombre)}</div>
         <div class="resp-info">
           <div class="rname">${n2}</div>
@@ -1121,7 +1133,13 @@ function renderResponsables(data){
   }).join('')||'<div class="empty">Sin responsables asignados en la selección</div>';
 }
 
-function toggleRespBlock(idx){
+function toggleRespBlock(idx, e){
+  // No cerrar si el click viene de un elemento editable
+  if(e && e.target && (
+    e.target.closest('.pill-btn') ||
+    e.target.closest('.edit-date') ||
+    e.target.closest('.estado-popup')
+  )) return;
   const block=document.getElementById('rh-'+idx);
   const tog=document.getElementById('rtog-'+idx);
   const isOpen=block.classList.contains('open');
@@ -1177,8 +1195,10 @@ function renderTabla(data){
       <td style="white-space:nowrap">${fmtDate(r.fechaAud)}</td>
       <td>${pillTipo(r.tipoHallazgo)}</td>
       <td style="font-size:10px">${rn||'—'}</td>
-            <td style="font-size:11px;min-width:200px;max-width:300px;white-space:pre-wrap;word-break:break-word;line-height:1.4">${sd}</td>
-      <td style="font-size:11px;min-width:200px;max-width:300px;white-space:pre-wrap;word-break:break-word;line-height:1.4;color:var(--text2)">${ac}</td>
+            <td style="font-size:11px;min-width:220px;max-width:320px;white-space:pre-wrap;word-break:break-word;line-height:1.4">${sd}</td>
+      <td style="min-width:220px;max-width:320px">
+        <textarea class="edit-textarea" rows="3" onblur="saveField(${r.rowId},'accionDesc',this.value)" title="Editar acción correctiva">${(r.accionDesc||'').replace(/['"]/g,'')}</textarea>
+      </td>
       <td style="white-space:nowrap">${fmtDate(r.fMaxCorr)}${vencBadge}</td>
       <td>${fImplCorrInput}</td>
       <td>${pillEstadoEdit(r.estCorr,"estCorr",r.rowId)}</td>
