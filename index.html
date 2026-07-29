@@ -328,7 +328,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div style="display:flex;align-items:center;gap:16px">
       <span class="logo-badge">GRIFFOULIERE</span>
       <span style="color:white;font-size:15px;font-weight:600">Tablero de Hallazgos SGI</span>
-      <span style="color:#888;font-size:11px">REV 02 &nbsp;·&nbsp; 15/05/2026</span>
+      <span style="color:#888;font-size:11px">REV 03 &nbsp;·&nbsp; 29/07/2026</span>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
       <div id="user-bar" style="display:none;align-items:center;gap:8px;color:#ccc;font-size:13px">
@@ -402,6 +402,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="kpi danger"><div class="lbl">9. Acc. Pendientes</div><div class="val" id="k-pen">—</div><div class="sub" id="k-pen-pct">—</div></div>
     <div class="kpi danger"><div class="lbl">10. Acciones Sin Cierre</div><div class="val" id="k-venc">—</div><div class="sub">abiertas y vencidas</div></div>
     <div class="kpi"><div class="lbl">11. Avance Acciones</div><div class="val" id="k-av">—</div><div class="pbar"><div class="pfill" id="k-bar" style="width:0%"></div></div></div>
+    <div class="kpi"><div class="lbl">12. Cumplimiento OM</div><div class="val" id="k-om-av">—</div><div class="pbar"><div class="pfill" id="k-om-bar" style="width:0%;background:var(--blue)"></div></div></div>
   </div>
 
   <!-- TABS -->
@@ -998,13 +999,23 @@ function renderTodo(){
   const fin=data.filter(r=>r.estAcc.trim()==='FINALIZADO').length;
   const cur=data.filter(r=>r.estAcc.trim()==='EN CURSO').length;
   const pen=data.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
-  const finAc=data.filter(r=>r.estAcc.trim()==='FINALIZADO').length;
   const hoy=new Date();
-  const enCurso=data.filter(r=>r.estAcc.trim()==='EN CURSO').length;
-  const pendAc=data.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
-  // BL pendiente = PENDIENTE o #N/A (sin cierre) — normCierre ya convierte #N/A a PENDIENTE
-  const pendBL=data.filter(r=>r.estCierre==='PENDIENTE').length;
-  const sinCierre=pendBL; // alias para KPI 9
+  // Separar OM del resto
+  const dataOM=data.filter(r=>r.tipoHallazgo==='Oportunidad de Mejora');
+  const dataSinOM=data.filter(r=>r.tipoHallazgo!=='Oportunidad de Mejora');
+  // KPI 11 — Avance Acciones (excluye OM)
+  const finAc=dataSinOM.filter(r=>r.estAcc.trim()==='FINALIZADO').length;
+  const enCurso=dataSinOM.filter(r=>r.estAcc.trim()==='EN CURSO').length;
+  const pendAc=dataSinOM.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
+  const pendBL=dataSinOM.filter(r=>r.estCierre==='PENDIENTE').length;
+  const sinCierre=data.filter(r=>r.estCierre==='PENDIENTE').length;
+  // KPI 12 — Cumplimiento OM
+  const omFin=dataOM.filter(r=>r.estAcc.trim()==='FINALIZADO').length;
+  const omCur=dataOM.filter(r=>r.estAcc.trim()==='EN CURSO').length;
+  const omPen=dataOM.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
+  const omBL=dataOM.filter(r=>r.estCierre==='PENDIENTE').length;
+  const omDen=omFin+omCur+omPen+omBL;
+  const omAv=omDen>0?Math.round(omFin/omDen*100):0;
   // FORMULA: FINALIZADO(AC) / (FINALIZADO(AC) + EN CURSO(AC) + PENDIENTE(AC) + PENDIENTE(BL))
   const denominador=finAc+enCurso+pendAc+pendBL;
   const av=denominador>0?Math.round(finAc/denominador*100):0;
@@ -1022,6 +1033,8 @@ function renderTodo(){
   document.getElementById('k-venc').textContent=sinCierre;
   document.getElementById('k-av').textContent=av+'%';
   const _kb=document.getElementById('k-bar');if(_kb)_kb.style.width=av+'%';
+  const _omav=document.getElementById('k-om-av');if(_omav)_omav.textContent=omAv+'%';
+  const _ombar=document.getElementById('k-om-bar');if(_ombar)_ombar.style.width=omAv+'%';
   const _fc=document.getElementById('fcount');if(_fc)_fc.textContent=`${total} registros`;
   renderCharts(data);renderResponsables(data);renderTabla(data);
   if(document.getElementById('tab-plan')?.classList.contains('active')) renderPlan(data);
