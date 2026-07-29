@@ -626,15 +626,15 @@ function diasR(v){const d=parseDate(v);if(!d)return null;return Math.round((d-ne
 function initials(n){return(n||'').trim().split(' ').filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()||'?';}
 function toast(msg,dur=2500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function setStatus(type,msg){
-  document.getElementById('sdot').className='sdot '+type;
-  document.getElementById('stxt').textContent=msg;
+  const _sd=document.getElementById('sdot');if(_sd)_sd.className='sdot '+type;
+  const _st=document.getElementById('stxt');if(_st)_st.textContent=msg;
   const n=new Date();
-  document.getElementById('supdate').textContent=`Actualizado: ${n.getHours().toString().padStart(2,'0')}:${n.getMinutes().toString().padStart(2,'0')}`;
+  const _su=document.getElementById('supdate');if(_su)_su.textContent=`Actualizado: ${n.getHours().toString().padStart(2,'0')}:${n.getMinutes().toString().padStart(2,'0')}`;
 }
 function loading(show,txt='Cargando...'){
   const o=document.getElementById('overlay');
   o.style.display=show?'flex':'none';
-  document.getElementById('overlay-txt').textContent=txt;
+  const _ot=document.getElementById('overlay-txt');if(_ot)_ot.textContent=txt;
 }
 function switchTab(id,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -1021,8 +1021,8 @@ function renderTodo(){
   document.getElementById('k-pen').textContent=pen;document.getElementById('k-pen-pct').textContent=pct(pen);
   document.getElementById('k-venc').textContent=sinCierre;
   document.getElementById('k-av').textContent=av+'%';
-  document.getElementById('k-bar').style.width=av+'%';
-  document.getElementById('fcount').textContent=`${total} registros`;
+  const _kb=document.getElementById('k-bar');if(_kb)_kb.style.width=av+'%';
+  const _fc=document.getElementById('fcount');if(_fc)_fc.textContent=`${total} registros`;
   renderCharts(data);renderResponsables(data);renderTabla(data);
   if(document.getElementById('tab-plan')?.classList.contains('active')) renderPlan(data);
   if(document.getElementById('tab-verificaciones')?.classList.contains('active')) renderVerificaciones(data);
@@ -1281,7 +1281,7 @@ function ordenar(col){
 }
 
 function renderTabla(data){
-  document.getElementById('tbl-count').textContent=`${data.length} registros`;
+  const _tc=document.getElementById('tbl-count');if(_tc)_tc.textContent=`${data.length} registros`;
   const hoy=new Date();
   // Ordenar: NC primero, luego OBS, luego OM, resto al final
   const tipoOrder = t => {
