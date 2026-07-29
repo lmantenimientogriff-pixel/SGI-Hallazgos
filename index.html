@@ -1553,7 +1553,7 @@ async function recargar(){
     filtrados=[...rawData];
     poblarFiltros(rawData);aplicarFiltros();
     setStatus('live',`${rawData.length} hallazgos cargados en tiempo real`);
-    document.getElementById('subtitle').textContent=`${rawData.length} hallazgos · Datos en vivo · Google Sheets`;
+    const _sub=document.getElementById('subtitle');if(_sub)_sub.textContent=`${rawData.length} hallazgos · Datos en vivo · Google Sheets`;
     toast(`${rawData.length} hallazgos cargados ✓`);
   }catch(e){
     setStatus('error','Error al cargar — verificá la URL o usá Demo');
