@@ -372,6 +372,9 @@ tbody tr:hover td{background:var(--surface2)}
 .chart-card-sub{font-size:10px;color:var(--text3);margin-bottom:12px}
 .chart-wrap{position:relative;height:340px}
 .chart-wrap-sm{position:relative;height:220px}
+.chart-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.chart-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+@media(max-width:900px){.chart-grid-3{grid-template-columns:1fr 1fr}}
 .analisis-toggle{font-size:11px;padding:6px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px}
 .analisis-toggle.active{background:var(--text);color:var(--bg);border-color:var(--text)}
 </style>
@@ -709,6 +712,95 @@ tbody tr:hover td{background:var(--surface2)}
       <div class="chart-card-title">Incidentes por mes</div>
       <div class="chart-card-sub">Cantidad total de incidentes registrados mes a mes</div>
       <div class="chart-wrap-sm"><canvas id="chart-ssoma-incidentes"></canvas></div>
+    </div>
+
+    <div style="border-top:2px solid var(--border);margin:22px 0 16px"></div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:2px">Indicadores generales SSOMA</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Serie completa de indicadores definidos originalmente en la demo, ahora con datos reales</div>
+
+    <!-- FILA 1: Evolución mensual — ancho completo -->
+    <div class="chart-card" style="margin-bottom:14px">
+      <div class="chart-card-title">Evolución mensual de eventos</div>
+      <div class="chart-card-sub">Línea superior: total · Líneas inferiores: por categoría · Sólida = período actual, punteada = mismo mes año anterior</div>
+      <div class="chart-wrap"><canvas id="chart-ssoma-evolucion"></canvas></div>
+    </div>
+
+    <!-- FILA 2: Tipo por mes apilado — ancho completo -->
+    <div class="chart-card" style="margin-bottom:14px">
+      <div class="chart-card-title">Tipo de accidente/incidente por mes</div>
+      <div class="chart-card-sub">Barras apiladas — Accidente / Incidente / Casi accidente</div>
+      <div class="chart-wrap"><canvas id="chart-ssoma-tipomes"></canvas></div>
+    </div>
+
+    <!-- FILA 3 -->
+    <div class="chart-grid-3">
+      <div class="chart-card">
+        <div class="chart-card-title">Severidad real</div>
+        <div class="chart-card-sub">Nivel de severidad registrado</div>
+        <div class="chart-wrap-sm"><canvas id="chart-ssoma-sevreal"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Severidad potencial</div>
+        <div class="chart-card-sub">Nivel de severidad potencial</div>
+        <div class="chart-wrap-sm"><canvas id="chart-ssoma-sevpot"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Tipo de contacto</div>
+        <div class="chart-card-sub">Categorías de tipo de contacto (top 6 + otros)</div>
+        <div class="chart-wrap-sm"><canvas id="chart-ssoma-contacto"></canvas></div>
+      </div>
+    </div>
+
+    <!-- FILA 4 -->
+    <div class="chart-grid-3">
+      <div class="chart-card">
+        <div class="chart-card-title">Lesiones</div>
+        <div class="chart-card-sub">Con y sin lesiones personales</div>
+        <div class="chart-wrap-sm"><canvas id="chart-ssoma-lesiones"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Derrames — m³</div>
+        <div class="chart-card-sub">Cantidad de eventos por rango de m³ derramados</div>
+        <div class="chart-wrap-sm"><canvas id="chart-ssoma-derrames"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Empresa</div>
+        <div class="chart-card-sub">Distribución por empresa (variantes agrupadas)</div>
+        <div class="chart-wrap-sm"><canvas id="chart-ssoma-empresa"></canvas></div>
+      </div>
+    </div>
+
+    <!-- FILA 5 -->
+    <div class="chart-grid-3">
+      <div class="chart-card">
+        <div class="chart-card-title">Provincia</div>
+        <div class="chart-card-sub">Distribución geográfica de eventos</div>
+        <div class="chart-wrap-sm"><canvas id="chart-ssoma-provincia"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Centro de costo</div>
+        <div class="chart-card-sub">Top con mayor siniestralidad (Unidad de negocio)</div>
+        <div class="chart-wrap-sm"><canvas id="chart-ssoma-centrocosto"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Pérdidas económicas</div>
+        <div class="chart-card-sub">Distribución por categoría registrada (top 6 + otros)</div>
+        <div class="chart-wrap-sm"><canvas id="chart-ssoma-perdidas"></canvas></div>
+      </div>
+    </div>
+
+    <!-- FILA 6 -->
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <div class="chart-card-title">Clasificación final</div>
+        <div class="chart-card-sub">Categoría definitiva del evento</div>
+        <div class="chart-wrap-sm"><canvas id="chart-ssoma-clasificacion"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Culpabilidad</div>
+        <div class="chart-card-sub">Distribución por responsabilidad del evento</div>
+        <div class="chart-wrap-sm"><canvas id="chart-ssoma-culpabilidad"></canvas></div>
+      </div>
     </div>
   </div>
 
@@ -2797,7 +2889,9 @@ function habilitarDragScroll(el){
 
 // ── ANÁLISIS SSOMA — GRÁFICOS (Accidentes por mes/centro de costo, Incidentes por mes) ──
 let ssomaTrendOn = false, ssomaCompareOn = false;
-const chartsSSOMA = { acc:null, inc:null };
+const chartsSSOMA = { acc:null, inc:null, evolucion:null, tipomes:null, sevreal:null, sevpot:null,
+  contacto:null, lesiones:null, derrames:null, empresa:null, provincia:null, centrocosto:null,
+  perdidas:null, clasificacion:null, culpabilidad:null };
 const SSOMA_PALETA = ['#378ADD','#C00000','#1D9E75','#EF9F27','#534AB7','#E07B39','#4C1D95','#0891B2','#BE185D','#65A30D'];
 const MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -2961,6 +3055,193 @@ function renderAnalisisSSOMA(){
       }
     });
   }
+
+  renderIndicadoresGeneralesSSOMA();
+}
+
+// ── HELPERS genéricos de agrupamiento para los indicadores generales ──
+function ssomaCountBy(arr, fn){
+  const map = {};
+  arr.forEach(r=>{
+    const v = String(fn(r)||'').trim();
+    if(!v) return;
+    map[v] = (map[v]||0)+1;
+  });
+  return map;
+}
+function ssomaCountByNorm(arr, fn){
+  const map = new Map();
+  arr.forEach(r=>{
+    const val = String(fn(r)||'').trim();
+    if(!val) return;
+    const k = normLibre(val);
+    if(!map.has(k)) map.set(k, {label:val, count:1});
+    else map.get(k).count++;
+  });
+  const out = {};
+  map.forEach(o => out[o.label] = o.count);
+  return out;
+}
+function ssomaTopNOtros(countsObj, n=6){
+  const entries = Object.entries(countsObj).sort((a,b)=>b[1]-a[1]);
+  if(entries.length <= n) return entries;
+  const top = entries.slice(0,n);
+  const restoSum = entries.slice(n).reduce((s,[,v])=>s+v,0);
+  if(restoSum>0) top.push(['Otros', restoSum]);
+  return top;
+}
+function ssomaBucketDerrame(v){
+  if(v===null||v===undefined||v==='') return null;
+  const n = parseFloat(String(v).replace(',','.'));
+  if(isNaN(n)) return null;
+  if(n<=0) return 'Sin derrame (0)';
+  if(n<=1) return '0 - 1 m³';
+  if(n<=5) return '1 - 5 m³';
+  if(n<=20) return '5 - 20 m³';
+  return '> 20 m³';
+}
+function ssomaDonut(id, entries, coloresBase){
+  if(chartsSSOMA[id]) chartsSSOMA[id].destroy();
+  const ctx = document.getElementById('chart-ssoma-'+id);
+  if(!ctx) return;
+  if(!entries.length){ chartsSSOMA[id]=null; return; }
+  const labels = entries.map(e=>e[0]);
+  const data = entries.map(e=>e[1]);
+  const colors = labels.map((_,i)=>coloresBase[i % coloresBase.length]);
+  chartsSSOMA[id] = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels, datasets:[{data, backgroundColor:colors, borderWidth:0}]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom', labels:{font:{size:9}, boxWidth:8, padding:5}},
+        tooltip:{callbacks:{label: c => {
+          const total = c.dataset.data.reduce((a,b)=>a+b,0);
+          return ` ${c.label}: ${c.parsed} (${total?Math.round(c.parsed/total*100):0}%)`;
+        }}}
+      }
+    }
+  });
+}
+function ssomaBar(id, entries, color, horizontal){
+  if(chartsSSOMA[id]) chartsSSOMA[id].destroy();
+  const ctx = document.getElementById('chart-ssoma-'+id);
+  if(!ctx) return;
+  if(!entries.length){ chartsSSOMA[id]=null; return; }
+  const labels = entries.map(e=>e[0]);
+  const data = entries.map(e=>e[1]);
+  chartsSSOMA[id] = new Chart(ctx, {
+    type:'bar',
+    data:{labels, datasets:[{data, backgroundColor:color}]},
+    options:{
+      indexAxis: horizontal ? 'y' : 'x',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ beginAtZero:true, ticks:{font:{size:9}, precision:0} },
+        y:{ ticks:{font:{size:9}} }
+      }
+    }
+  });
+}
+
+function renderIndicadoresGeneralesSSOMA(){
+  const paleta = SSOMA_PALETA;
+
+  // ── FILA 1: Evolución mensual (todas las categorías, actual vs año anterior) ──
+  const porMesTodo = {};
+  rawSSOMA.forEach(r=>{
+    const key = ssomaMesKey(r.fecha);
+    if(!key) return;
+    if(!porMesTodo[key]) porMesTodo[key] = {total:0, acc:0, inc:0, casi:0};
+    const t = (r.tipo||'').toLowerCase();
+    porMesTodo[key].total++;
+    if(t.includes('casi')) porMesTodo[key].casi++;
+    else if(t.includes('accidente')) porMesTodo[key].acc++;
+    else if(t.includes('incidente')) porMesTodo[key].inc++;
+  });
+  const ejeXEvol = ssomaRangoUltimos12(porMesTodo);
+  const labelsEvol = ejeXEvol.map(ssomaMesLabel);
+  const serieActual = cat => ejeXEvol.map(k => (porMesTodo[k] && porMesTodo[k][cat]) || 0);
+  const serieAnterior = cat => ejeXEvol.map(k => {
+    const kAnt = ssomaMesAnterior(k);
+    return (porMesTodo[kAnt] && porMesTodo[kAnt][cat]) || 0;
+  });
+
+  if(chartsSSOMA.evolucion) chartsSSOMA.evolucion.destroy();
+  const ctxEvol = document.getElementById('chart-ssoma-evolucion');
+  if(ctxEvol){
+    chartsSSOMA.evolucion = new Chart(ctxEvol, {
+      type:'line',
+      data:{
+        labels: labelsEvol,
+        datasets:[
+          {label:'Total', data:serieActual('total'), borderColor:'#1a1a1a', backgroundColor:'rgba(26,26,26,.08)', borderWidth:3, pointRadius:3, tension:.3, fill:true},
+          {label:'Accidentes', data:serieActual('acc'), borderColor:'#C00000', backgroundColor:'transparent', borderWidth:2, pointRadius:2, tension:.3},
+          {label:'Incidentes', data:serieActual('inc'), borderColor:'#EF9F27', backgroundColor:'transparent', borderWidth:2, pointRadius:2, tension:.3},
+          {label:'Casi accidentes', data:serieActual('casi'), borderColor:'#1D9E75', backgroundColor:'transparent', borderWidth:2, pointRadius:2, tension:.3},
+          {label:'Total año anterior', data:serieAnterior('total'), borderColor:'#1a1a1a', backgroundColor:'transparent', borderWidth:1.5, borderDash:[5,4], pointRadius:1, tension:.3},
+          {label:'Accidentes año anterior', data:serieAnterior('acc'), borderColor:'#C00000', backgroundColor:'transparent', borderWidth:1, borderDash:[4,4], pointRadius:1, tension:.3},
+          {label:'Incidentes año anterior', data:serieAnterior('inc'), borderColor:'#EF9F27', backgroundColor:'transparent', borderWidth:1, borderDash:[4,4], pointRadius:1, tension:.3},
+          {label:'Casi acc. año anterior', data:serieAnterior('casi'), borderColor:'#1D9E75', backgroundColor:'transparent', borderWidth:1, borderDash:[4,4], pointRadius:1, tension:.3},
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index', intersect:false},
+        plugins:{ legend:{position:'bottom', labels:{font:{size:9}, boxWidth:10, padding:8}} },
+        scales:{
+          x:{ ticks:{font:{size:10}} },
+          y:{ beginAtZero:true, ticks:{font:{size:10}, precision:0} }
+        }
+      }
+    });
+  }
+
+  // ── FILA 2: Tipo por mes apilado ──
+  if(chartsSSOMA.tipomes) chartsSSOMA.tipomes.destroy();
+  const ctxTM = document.getElementById('chart-ssoma-tipomes');
+  if(ctxTM){
+    chartsSSOMA.tipomes = new Chart(ctxTM, {
+      type:'bar',
+      data:{
+        labels: labelsEvol,
+        datasets:[
+          {label:'Accidente', data:serieActual('acc'), backgroundColor:'#C00000', stack:'s'},
+          {label:'Incidente', data:serieActual('inc'), backgroundColor:'#EF9F27', stack:'s'},
+          {label:'Casi accidente', data:serieActual('casi'), backgroundColor:'#1D9E75', stack:'s'},
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{position:'bottom', labels:{font:{size:10}, boxWidth:10, padding:8}} },
+        scales:{ x:{stacked:true, ticks:{font:{size:10}}}, y:{stacked:true, beginAtZero:true, ticks:{font:{size:10}, precision:0}} }
+      }
+    });
+  }
+
+  // ── FILA 3 ──
+  ssomaDonut('sevreal', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.severidad), 6), paleta);
+  ssomaDonut('sevpot', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.severidadPot), 6), paleta);
+  ssomaDonut('contacto', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.tipoContacto), 6), paleta);
+
+  // ── FILA 4 ──
+  ssomaDonut('lesiones', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.lesiones), 4), ['#C00000','#1D9E75','#888780']);
+  const derrameCounts = {};
+  rawSSOMA.forEach(r=>{ const b = ssomaBucketDerrame(r.m3Derramados); if(b) derrameCounts[b]=(derrameCounts[b]||0)+1; });
+  const ordenDerrame = ['Sin derrame (0)','0 - 1 m³','1 - 5 m³','5 - 20 m³','> 20 m³'];
+  const derrameEntries = ordenDerrame.filter(k=>derrameCounts[k]).map(k=>[k,derrameCounts[k]]);
+  ssomaBar('derrames', derrameEntries, '#378ADD', false);
+  ssomaDonut('empresa', ssomaTopNOtros(ssomaCountByNorm(rawSSOMA, r=>r.empresa), 6), paleta);
+
+  // ── FILA 5 ──
+  ssomaDonut('provincia', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.provincia), 6), paleta);
+  ssomaBar('centrocosto', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.unNegocio), 8), '#534AB7', true);
+  ssomaDonut('perdidas', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.perdidas), 6), paleta);
+
+  // ── FILA 6 ──
+  ssomaDonut('clasificacion', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.categoria), 6), paleta);
+  ssomaDonut('culpabilidad', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.culpabilidad), 6), paleta);
 }
 
 async function cargarSSOMA(){
