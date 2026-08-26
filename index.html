@@ -2532,7 +2532,7 @@ let rawSSOMA = [], rawAccionesSSOMA = [], accionesPorPreliminar = {}, ssomaCarga
 
 function mapRowSSOMA(r){
   return {
-    serial:        r['Serial Number'] || '',
+    serial:        r['Serial Number'] || r['_serialByCol'] || '',
     fecha:         r['Fecha de generacion'] || '',
     hora:          r['Hora'] || '',
     direccion:     r['Dirección'] || '',
@@ -2567,7 +2567,7 @@ function mapRowSSOMA(r){
 function mapRowAccionSSOMA(r){
   return {
     serial:        r['Serial Number'] || '',
-    numPreliminar: String(r['Numero de Hallazgo/Preliminar de Accidente'] || '').trim(),
+    numPreliminar: String(r['Numero de Hallazgo/Preliminar de Accidente'] || r['_numPreliminarByCol'] || '').trim(),
     respSector:    r['Resp. del Sector - APELLIDOYNOMBRE'] || '',
     causaRaiz:     r['Descripción de la Causa Raiz'] || '',
     criticidad:    r['Criticidad'] || '',
@@ -2580,7 +2580,7 @@ function mapRowAccionSSOMA(r){
     obsCierre:     r['Observaciones -cierre'] || '',
     estVerif:      (r['Estado de la verificacion'] || '').toString().trim(),
     obsVerif:      r['verificación eficacia / Observaciones'] || '',
-    codigoAccion:  String(r['N FORMULARIO X'] || '').trim(),
+    codigoAccion:  String(r['N FORMULARIO X'] || r['_codigoAccionByCol'] || '').trim(),
   };
 }
 
