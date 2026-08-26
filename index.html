@@ -341,6 +341,10 @@ tbody tr:hover td{background:var(--surface2)}
 .vinculo-accion-card .campo-mini label{font-size:9px;color:var(--text3);text-transform:uppercase}
 .vinculo-link-btn{font-size:10px;color:var(--blue);text-decoration:none;font-weight:600;cursor:pointer;background:none;border:none;padding:0}
 .vinculo-link-btn:hover{text-decoration:underline}
+
+.ssoma-filtros .fgrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.ssoma-filtros select, .ssoma-filtros input[type=date]{width:100%;font-size:11px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);outline:none;cursor:pointer}
+.ssoma-filtros select:focus, .ssoma-filtros input[type=date]:focus{border-color:var(--blue)}
 </style>
 </head>
 <body>
@@ -403,7 +407,7 @@ tbody tr:hover td{background:var(--surface2)}
   </div>
 
   <!-- FILTROS -->
-  <div class="filters-bar">
+  <div class="filters-bar" id="filtros-hallazgos">
     <div class="ftitle"><i class="ti ti-filter" style="font-size:11px"></i> Filtros — selección múltiple</div>
     <div class="fgrid">
       <div class="fi"><label>Empresa</label><div class="ms-wrapper" id="ms-empresa"></div></div>
@@ -438,7 +442,7 @@ tbody tr:hover td{background:var(--surface2)}
   </div>
 
   <!-- KPIS -->
-  <div class="kpis">
+  <div class="kpis" id="kpis-hallazgos">
     <div class="kpi"><div class="lbl">1. Total hallazgos</div><div class="val" id="k-total">—</div><div class="sub">en la selección</div></div>
     <div class="kpi"><div class="lbl">2. No Conformidades</div><div class="val" id="k-nc">—</div><div class="sub" id="k-nc-pct">—</div></div>
     <div class="kpi"><div class="lbl">3. Observaciones</div><div class="val" id="k-obs">—</div><div class="sub" id="k-obs-pct">—</div></div>
@@ -583,6 +587,50 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn-green" onclick="exportarSSOMAExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+      </div>
+    </div>
+
+    <div class="filters-bar ssoma-filtros">
+      <div class="ftitle"><i class="ti ti-filter" style="font-size:11px"></i> Filtros — Accidentes/Incidentes</div>
+      <div class="fgrid">
+        <div class="fi"><label>Tipo</label>
+          <select id="ssf-tipo" onchange="aplicarFiltrosSSOMA()">
+            <option value="">Todos</option>
+            <option value="accidente">Accidente</option>
+            <option value="incidente">Incidente</option>
+            <option value="casi">Casi accidente</option>
+          </select>
+        </div>
+        <div class="fi"><label>Generante</label><select id="ssf-generante" onchange="aplicarFiltrosSSOMA()"><option value="">Todos</option></select></div>
+        <div class="fi"><label>Empresa</label><select id="ssf-empresa" onchange="aplicarFiltrosSSOMA()"><option value="">Todas</option></select></div>
+        <div class="fi"><label>Unidad de negocio</label><select id="ssf-unnegocio" onchange="aplicarFiltrosSSOMA()"><option value="">Todas</option></select></div>
+        <div class="fi"><label>Estado investigación</label>
+          <select id="ssf-estado" onchange="aplicarFiltrosSSOMA()">
+            <option value="">Todos</option>
+            <option value="CERRADO">Cerrado</option>
+            <option value="ABIERTO">En proceso</option>
+            <option value="SINPROC">Sin procesar</option>
+          </select>
+        </div>
+        <div class="fi"><label>Informe final</label>
+          <select id="ssf-informe" onchange="aplicarFiltrosSSOMA()">
+            <option value="">Todos</option>
+            <option value="CON">Con informe</option>
+            <option value="SIN">Sin informe</option>
+          </select>
+        </div>
+        <div class="fi" style="grid-column:span 2">
+          <label>Rango de fechas</label>
+          <div class="fdate">
+            <input type="date" id="ssf-desde" onchange="aplicarFiltrosSSOMA()" title="Desde">
+            <span>—</span>
+            <input type="date" id="ssf-hasta" onchange="aplicarFiltrosSSOMA()" title="Hasta">
+          </div>
+        </div>
+      </div>
+      <div class="ffooter">
+        <span class="fcount" id="ssoma-fcount">— registros</span>
+        <button onclick="limpiarFiltrosSSOMA()"><i class="ti ti-x"></i> Limpiar filtros</button>
       </div>
     </div>
 
@@ -742,6 +790,12 @@ function switchTab(id,el){
   el.classList.add('active');
   const tabEl = document.getElementById('tab-'+id);
   if(tabEl) tabEl.classList.add('active');
+  // Ocultar filtros y KPIs de Hallazgos fuera de su pestaña (pestañas SSOMA tienen los suyos propios)
+  const esSSOMA = (id === 'ssoma');
+  const fH = document.getElementById('filtros-hallazgos');
+  const kH = document.getElementById('kpis-hallazgos');
+  if(fH) fH.style.display = esSSOMA ? 'none' : '';
+  if(kH) kH.style.display = esSSOMA ? 'none' : '';
   if(id==='log' && SESSION && SESSION.rol==='admin') cargarLogSheet();
   if(id==='usuarios' && SESSION && SESSION.rol==='admin') cargarUsuariosSheet();
   if(id==='responsables' && filtrados.length) {
@@ -2528,7 +2582,7 @@ document.addEventListener('DOMContentLoaded', () => { inicializar(); setTimeout(
 //  MÓDULO SSOMA — ACCIDENTES / INCIDENTES  (NUEVO)
 // ══════════════════════════════════════════════════════════════════════
 
-let rawSSOMA = [], rawAccionesSSOMA = [], accionesPorPreliminar = {}, ssomaCargado = false;
+let rawSSOMA = [], rawAccionesSSOMA = [], filtradosSSOMA = [], accionesPorPreliminar = {}, ssomaCargado = false;
 
 function mapRowSSOMA(r){
   return {
@@ -2613,15 +2667,72 @@ async function cargarSSOMA(){
     });
 
     ssomaCargado = true;
-    renderSSOMAKpis(rawSSOMA);
-    renderTecnicoGenerante(rawSSOMA);
-    renderTablaSSOMA(rawSSOMA);
+    poblarFiltrosSSOMA(rawSSOMA);
+    aplicarFiltrosSSOMA();
     document.getElementById('ssoma-subtitle').textContent = `${rawSSOMA.length} eventos · ${rawAccionesSSOMA.length} acciones correctivas`;
   }catch(e){
     tbody.innerHTML = `<tr><td colspan="12" class="empty">Error al cargar: ${e.message}</td></tr>`;
     document.getElementById('ssoma-subtitle').textContent = 'Error al cargar datos SSOMA';
     console.error(e);
   }
+}
+
+function poblarFiltrosSSOMA(data){
+  const llenar = (id, valores) => {
+    const sel = document.getElementById(id);
+    const actual = sel.value;
+    const opts = [...new Set(valores.filter(Boolean))].sort();
+    sel.innerHTML = sel.options[0].outerHTML + opts.map(v => `<option value="${v.replace(/"/g,'&quot;')}">${v}</option>`).join('');
+    if(opts.includes(actual)) sel.value = actual;
+  };
+  llenar('ssf-generante', data.map(r => r.generante));
+  llenar('ssf-empresa', data.map(r => r.empresa));
+  llenar('ssf-unnegocio', data.map(r => r.unNegocio));
+}
+
+function aplicarFiltrosSSOMA(){
+  const tipo = document.getElementById('ssf-tipo').value;
+  const generante = document.getElementById('ssf-generante').value;
+  const empresa = document.getElementById('ssf-empresa').value;
+  const unNegocio = document.getElementById('ssf-unnegocio').value;
+  const estado = document.getElementById('ssf-estado').value;
+  const informe = document.getElementById('ssf-informe').value;
+  const desde = document.getElementById('ssf-desde').value ? new Date(document.getElementById('ssf-desde').value) : null;
+  const hasta = document.getElementById('ssf-hasta').value ? new Date(document.getElementById('ssf-hasta').value) : null;
+
+  filtradosSSOMA = rawSSOMA.filter(r => {
+    if(tipo){
+      const t = (r.tipo||'').toLowerCase();
+      if(tipo==='accidente' && !t.includes('accidente')) return false;
+      if(tipo==='incidente' && !t.includes('incidente')) return false;
+      if(tipo==='casi' && !t.includes('casi')) return false;
+    }
+    if(generante && r.generante !== generante) return false;
+    if(empresa && r.empresa !== empresa) return false;
+    if(unNegocio && r.unNegocio !== unNegocio) return false;
+    if(estado){
+      if(estado==='SINPROC'){ if(r.estadoFinal==='CERRADO'||r.estadoFinal==='ABIERTO') return false; }
+      else if(r.estadoFinal !== estado) return false;
+    }
+    if(informe==='CON' && (!r.informeFinal || r.informeFinal.toUpperCase().includes('SIN INFORME'))) return false;
+    if(informe==='SIN' && r.informeFinal && !r.informeFinal.toUpperCase().includes('SIN INFORME')) return false;
+    const d = parseDate(r.fecha);
+    if(desde && d && d < desde) return false;
+    if(hasta && d && d > hasta) return false;
+    return true;
+  });
+
+  document.getElementById('ssoma-fcount').textContent = `${filtradosSSOMA.length} de ${rawSSOMA.length} registros`;
+  renderSSOMAKpis(filtradosSSOMA);
+  renderTecnicoGenerante(filtradosSSOMA);
+  renderTablaSSOMA(filtradosSSOMA);
+}
+
+function limpiarFiltrosSSOMA(){
+  ['ssf-tipo','ssf-generante','ssf-empresa','ssf-unnegocio','ssf-estado','ssf-informe'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ssf-desde').value = '';
+  document.getElementById('ssf-hasta').value = '';
+  aplicarFiltrosSSOMA();
 }
 
 function ssomaPillTipo(t){
@@ -2819,16 +2930,16 @@ async function saveFieldSSOMA(codigoAccion, campo, valor, el){
     const p = new URLSearchParams({ action:'updateSSOMA', codigoAccion, campo, valor });
     await fetch(API_URL() + '?' + p.toString());
     toast('✓ Guardado');
-    renderSSOMAKpis(rawSSOMA);
-    renderTecnicoGenerante(rawSSOMA);
+    renderSSOMAKpis(filtradosSSOMA);
+    renderTecnicoGenerante(filtradosSSOMA);
   }catch(e){
     toast('⚠ No se pudo guardar', 3000);
   }
 }
 
 function exportarSSOMAExcel(){
-  if(!rawSSOMA.length){ toast('Sin datos para exportar'); return; }
-  const filas = rawSSOMA.map(r => ({
+  if(!filtradosSSOMA.length){ toast('Sin datos para exportar'); return; }
+  const filas = filtradosSSOMA.map(r => ({
     'N°': r.serial, 'Fecha': fmtDate(r.fecha), 'Tipo': r.tipo, 'Severidad': r.severidad,
     'Generante': r.generante, 'Involucrado': r.involucrado, 'Unidad negocio': r.unNegocio,
     'Descripción': (r.descripcion||'').substring(0,300), 'Días perdidos': r.diasPerdidos,
