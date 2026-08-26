@@ -366,6 +366,14 @@ tbody tr:hover td{background:var(--surface2)}
 #ssoma-tbl-wrap.twrap{cursor:grab;user-select:none}
 #ssoma-tbl-wrap.twrap.dragging{cursor:grabbing}
 #ssoma-tbl-wrap.twrap.dragging *{pointer-events:none}
+
+/* Gráficos SSOMA */
+.chart-card-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.chart-card-sub{font-size:10px;color:var(--text3);margin-bottom:12px}
+.chart-wrap{position:relative;height:340px}
+.chart-wrap-sm{position:relative;height:220px}
+.analisis-toggle{font-size:11px;padding:6px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px}
+.analisis-toggle.active{background:var(--text);color:var(--bg);border-color:var(--text)}
 </style>
 </head>
 <body>
@@ -486,6 +494,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="tab" onclick="switchTab('plan',this)"><i class="ti ti-file-description" style="font-size:12px"></i> Plan de Acción</div>
     <div class="tab" onclick="switchTab('verificaciones',this)"><i class="ti ti-eye-check" style="font-size:12px"></i> Verificaciones</div>
     <div class="tab" onclick="switchTab('ssoma',this)"><i class="ti ti-alert-triangle" style="font-size:12px"></i> Acc./Incidentes</div>
+    <div class="tab" onclick="switchTab('ssomaanalisis',this)"><i class="ti ti-chart-histogram" style="font-size:12px"></i> Gráficos SSOMA</div>
     <div class="tab" id="tab-log-btn" onclick="switchTab('log',this)" style="display:none"><i class="ti ti-history" style="font-size:12px"></i> Log de cambios</div>
     <div class="tab" id="tab-usr-btn" onclick="switchTab('usuarios',this)" style="display:none"><i class="ti ti-users" style="font-size:12px"></i> Usuarios</div>
   </div>
@@ -677,6 +686,32 @@ tbody tr:hover td{background:var(--surface2)}
     </div>
   </div>
 
+  <!-- ═══════════ TAB GRÁFICOS SSOMA — ANÁLISIS ═══════════ -->
+  <div class="tcontent" id="tab-ssomaanalisis">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">Análisis de Accidentes e Incidentes</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Centro de costo = campo "Unidad de negocio" del informe preliminar</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="btn-tendencia" class="analisis-toggle" onclick="toggleTendenciaSSOMA()"><i class="ti ti-trending-up"></i> Línea de tendencia</button>
+        <button id="btn-comparativa" class="analisis-toggle" onclick="toggleComparativaSSOMA()"><i class="ti ti-calendar-stats"></i> Comparar período anterior</button>
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:16px">
+      <div class="chart-card-title">Accidentes por mes y centro de costo</div>
+      <div class="chart-card-sub">Barras apiladas por centro de costo · Botones arriba para tendencia y comparativa interanual</div>
+      <div class="chart-wrap"><canvas id="chart-ssoma-accidentes"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-title">Incidentes por mes</div>
+      <div class="chart-card-sub">Cantidad total de incidentes registrados mes a mes</div>
+      <div class="chart-wrap-sm"><canvas id="chart-ssoma-incidentes"></canvas></div>
+    </div>
+  </div>
+
   <div class="tcontent" id="tab-log">
     <div class="tbl-card">
       <div class="tbl-hdr">
@@ -797,7 +832,7 @@ function switchTab(id,el){
   const tabEl = document.getElementById('tab-'+id);
   if(tabEl) tabEl.classList.add('active');
   // Ocultar filtros y KPIs de Hallazgos fuera de su pestaña (pestañas SSOMA tienen los suyos propios)
-  const esSSOMA = (id === 'ssoma');
+  const esSSOMA = (id === 'ssoma' || id === 'ssomaanalisis');
   const fH = document.getElementById('filtros-hallazgos');
   const kH = document.getElementById('kpis-hallazgos');
   if(fH) fH.style.display = esSSOMA ? 'none' : '';
@@ -813,6 +848,7 @@ function switchTab(id,el){
   if(id==='plan' && filtrados.length) renderPlan(filtrados);
   if(id==='verificaciones') renderVerificaciones(filtrados);
   if(id==='ssoma') cargarSSOMA();
+  if(id==='ssomaanalisis') cargarSSOMA().then(renderAnalisisSSOMA);
 }
 
 async function cargarLogSheet(){
@@ -2663,6 +2699,23 @@ document.addEventListener('DOMContentLoaded', () => { inicializar(); setTimeout(
 // ══════════════════════════════════════════════════════════════════════
 
 let rawSSOMA = [], rawAccionesSSOMA = [], filtradosSSOMA = [], accionesPorPreliminar = {}, ssomaCargado = false;
+let ssomaOptTipo = [], ssomaOptSeveridad = [], ssomaOptInforme = [];
+
+function distinctSSOMA(campo){
+  const vals = new Set();
+  rawSSOMA.forEach(r => { const v = String(r[campo]||'').trim(); if(v) vals.add(v); });
+  return [...vals].sort((a,b)=>a.localeCompare(b));
+}
+
+function optsSSOMA(lista, actual){
+  const set = new Set(lista);
+  const val = String(actual||'').trim();
+  if(val) set.add(val);
+  const arr = [...set].sort((a,b)=>a.localeCompare(b));
+  return `<option value="">—</option>` + arr.map(v =>
+    `<option value="${escHtml(v)}" ${v===val?'selected':''}>${escHtml(v)}</option>`
+  ).join('');
+}
 
 function mapRowSSOMA(r){
   return {
@@ -2742,6 +2795,174 @@ function habilitarDragScroll(el){
   });
 }
 
+// ── ANÁLISIS SSOMA — GRÁFICOS (Accidentes por mes/centro de costo, Incidentes por mes) ──
+let ssomaTrendOn = false, ssomaCompareOn = false;
+const chartsSSOMA = { acc:null, inc:null };
+const SSOMA_PALETA = ['#378ADD','#C00000','#1D9E75','#EF9F27','#534AB7','#E07B39','#4C1D95','#0891B2','#BE185D','#65A30D'];
+const MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function ssomaMesKey(fecha){
+  const d = parseDate(fecha);
+  if(!d) return null;
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function ssomaMesLabel(key){
+  const [y,m] = key.split('-');
+  return MESES_ES[+m-1] + ' ' + y;
+}
+function ssomaMesAnterior(key){
+  const [y,m] = key.split('-').map(Number);
+  return (y-1) + '-' + String(m).padStart(2,'0');
+}
+function ssomaRangoUltimos12(porMesObj){
+  const keys = Object.keys(porMesObj).sort();
+  if(!keys.length) return [];
+  const [yFin, mFin] = keys[keys.length-1].split('-').map(Number);
+  const rango = [];
+  for(let i=11; i>=0; i--){
+    let y = yFin, m = mFin - i;
+    while(m <= 0){ m += 12; y -= 1; }
+    rango.push(y + '-' + String(m).padStart(2,'0'));
+  }
+  return rango;
+}
+function ssomaRegresionLineal(valores){
+  const n = valores.length;
+  if(n < 2) return valores.slice();
+  const xs = valores.map((_,i)=>i);
+  const sumX = xs.reduce((a,b)=>a+b,0);
+  const sumY = valores.reduce((a,b)=>a+b,0);
+  const sumXY = xs.reduce((s,x,i)=>s+x*valores[i],0);
+  const sumX2 = xs.reduce((s,x)=>s+x*x,0);
+  const denom = (n*sumX2 - sumX*sumX);
+  if(denom === 0) return valores.map(()=>sumY/n);
+  const slope = (n*sumXY - sumX*sumY) / denom;
+  const intercept = (sumY - slope*sumX) / n;
+  return xs.map(x => slope*x + intercept);
+}
+
+function toggleTendenciaSSOMA(){
+  ssomaTrendOn = !ssomaTrendOn;
+  document.getElementById('btn-tendencia').classList.toggle('active', ssomaTrendOn);
+  renderAnalisisSSOMA();
+}
+function toggleComparativaSSOMA(){
+  ssomaCompareOn = !ssomaCompareOn;
+  document.getElementById('btn-comparativa').classList.toggle('active', ssomaCompareOn);
+  renderAnalisisSSOMA();
+}
+
+function renderAnalisisSSOMA(){
+  if(!rawSSOMA.length) return;
+
+  // ── Accidentes por mes y centro de costo (Unidad de negocio) ──
+  const accidentes = rawSSOMA.filter(r => (r.tipo||'').toLowerCase().includes('accidente'));
+  const porMes = {};
+  accidentes.forEach(r=>{
+    const key = ssomaMesKey(r.fecha);
+    if(!key) return;
+    const cc = (r.unNegocio||'').trim() || 'Sin especificar';
+    if(!porMes[key]) porMes[key] = {};
+    porMes[key][cc] = (porMes[key][cc]||0) + 1;
+  });
+
+  const ejeX = ssomaRangoUltimos12(porMes);
+  const labels = ejeX.map(ssomaMesLabel);
+
+  const centrosCosto = [...new Set(accidentes.map(r => (r.unNegocio||'').trim() || 'Sin especificar'))].sort();
+  const datasets = centrosCosto.map((cc, i) => ({
+    label: cc,
+    data: ejeX.map(k => (porMes[k] && porMes[k][cc]) || 0),
+    backgroundColor: SSOMA_PALETA[i % SSOMA_PALETA.length],
+    stack: 'accidentes',
+    type: 'bar'
+  }));
+
+  const totalesPorMes = ejeX.map(k => porMes[k] ? Object.values(porMes[k]).reduce((a,b)=>a+b,0) : 0);
+
+  if(ssomaTrendOn){
+    datasets.push({
+      label: 'Tendencia',
+      data: ssomaRegresionLineal(totalesPorMes),
+      type: 'line',
+      borderColor: '#1a1a1a',
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderDash: [6,4],
+      pointRadius: 0,
+      order: -1,
+      stack: undefined
+    });
+  }
+
+  if(ssomaCompareOn){
+    const totalesAnioAnterior = ejeX.map(k => {
+      const kAnt = ssomaMesAnterior(k);
+      const eventosAnt = rawSSOMA.filter(r => (r.tipo||'').toLowerCase().includes('accidente') && ssomaMesKey(r.fecha) === kAnt);
+      return eventosAnt.length;
+    });
+    datasets.push({
+      label: 'Mismo mes, año anterior',
+      data: totalesAnioAnterior,
+      type: 'line',
+      borderColor: '#EF9F27',
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderDash: [2,3],
+      pointRadius: 3,
+      order: -1,
+      stack: undefined
+    });
+  }
+
+  if(chartsSSOMA.acc) chartsSSOMA.acc.destroy();
+  const ctxAcc = document.getElementById('chart-ssoma-accidentes');
+  if(ctxAcc){
+    chartsSSOMA.acc = new Chart(ctxAcc, {
+      type: 'bar',
+      data: { labels, datasets },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index', intersect:false},
+        plugins:{ legend:{position:'bottom', labels:{font:{size:10}, boxWidth:10, padding:8}} },
+        scales:{
+          x:{ stacked:true, ticks:{font:{size:10}} },
+          y:{ stacked:true, beginAtZero:true, ticks:{font:{size:10}, precision:0} }
+        }
+      }
+    });
+  }
+
+  // ── Incidentes por mes (total, sin desglose) ──
+  const incidentes = rawSSOMA.filter(r => {
+    const t = (r.tipo||'').toLowerCase();
+    return t.includes('incidente') && !t.includes('accidente');
+  });
+  const incPorMes = {};
+  incidentes.forEach(r=>{
+    const key = ssomaMesKey(r.fecha);
+    if(!key) return;
+    incPorMes[key] = (incPorMes[key]||0) + 1;
+  });
+  const ejeXInc = ssomaRangoUltimos12(incPorMes.length ? incPorMes : porMes);
+  const labelsInc = ejeXInc.map(ssomaMesLabel);
+  const dataInc = ejeXInc.map(k => incPorMes[k] || 0);
+
+  if(chartsSSOMA.inc) chartsSSOMA.inc.destroy();
+  const ctxInc = document.getElementById('chart-ssoma-incidentes');
+  if(ctxInc){
+    chartsSSOMA.inc = new Chart(ctxInc, {
+      type: 'bar',
+      data: { labels: labelsInc, datasets: [{ label:'Incidentes', data: dataInc, backgroundColor:'#EF9F27' }] },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false} },
+        scales:{ y:{ beginAtZero:true, ticks:{font:{size:10}, precision:0} }, x:{ ticks:{font:{size:10}} } }
+      }
+    });
+  }
+}
+
 async function cargarSSOMA(){
   if(ssomaCargado) return;
   const tbody = document.getElementById('ssoma-tbody');
@@ -2771,6 +2992,9 @@ async function cargarSSOMA(){
     });
 
     ssomaCargado = true;
+    ssomaOptTipo = distinctSSOMA('tipo');
+    ssomaOptSeveridad = distinctSSOMA('severidad');
+    ssomaOptInforme = distinctSSOMA('informeFinal');
     poblarFiltrosSSOMA(rawSSOMA);
     aplicarFiltrosSSOMA();
     habilitarDragScroll(document.getElementById('ssoma-tbl-wrap'));
@@ -2966,11 +3190,11 @@ function renderTablaSSOMA(data){
       : '<span style="color:var(--text3);font-size:10px">—</span>';
 
     const tdTipo = puedeEditar
-      ? `<input type="text" class="ssoma-input-sm" value="${escHtml(r.tipo)}" title="${escHtml(r.tipo)}" onchange="saveEventoSSOMA('${serialEsc}','tipo',this.value,this)">`
+      ? `<select class="ssoma-select-sm" title="${escHtml(r.tipo)}" onchange="saveEventoSSOMA('${serialEsc}','tipo',this.value,this)">${optsSSOMA(ssomaOptTipo, r.tipo)}</select>`
       : `<span class="ssoma-trunc" title="${escHtml(r.tipo)}">${ssomaPillTipo(r.tipo)}</span>`;
 
     const tdSeveridad = puedeEditar
-      ? `<input type="text" class="ssoma-input-sm" value="${escHtml(r.severidad)}" title="${escHtml(r.severidad)}" onchange="saveEventoSSOMA('${serialEsc}','severidad',this.value,this)">`
+      ? `<select class="ssoma-select-sm" title="${escHtml(r.severidad)}" onchange="saveEventoSSOMA('${serialEsc}','severidad',this.value,this)">${optsSSOMA(ssomaOptSeveridad, r.severidad)}</select>`
       : `<span class="ssoma-trunc" title="${escHtml(r.severidad)}">${r.severidad||'—'}</span>`;
 
     const tdEstado = puedeEditar
@@ -2982,7 +3206,7 @@ function renderTablaSSOMA(data){
       : ssomaPillEstadoFinal(r.estadoFinal);
 
     const tdInforme = puedeEditar
-      ? `<input type="text" class="ssoma-input-sm" value="${escHtml(r.informeFinal)}" title="${escHtml(r.informeFinal)}" onchange="saveEventoSSOMA('${serialEsc}','informeFinal',this.value,this)">`
+      ? `<select class="ssoma-select-sm" title="${escHtml(r.informeFinal)}" onchange="saveEventoSSOMA('${serialEsc}','informeFinal',this.value,this)">${optsSSOMA(ssomaOptInforme, r.informeFinal)}</select>`
       : `<span class="ssoma-trunc" title="${escHtml(r.informeFinal)}">${ssomaPillInforme(r.informeFinal)}</span>`;
 
     return `<tr>
