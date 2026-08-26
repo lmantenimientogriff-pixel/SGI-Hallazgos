@@ -1010,8 +1010,10 @@ const MS_PLACEHOLDERS={empresa:'Empresa',un:'Unidad negocio',depto:'Departamento
 let msOpts={};
 
 // ─── MULTI-SELECT ENGINE — SSOMA (estado propio, no interfiere con Hallazgos) ──
-const SEL_SSOMA={tipo:new Set(),generante:new Set(),empresa:new Set(),unnegocio:new Set(),estado:new Set(),informe:new Set()};
-const MS_PLACEHOLDERS_SSOMA={tipo:'Tipo',generante:'Generante',empresa:'Empresa',unnegocio:'Unidad negocio',estado:'Estado investigación',informe:'Informe final'};
+// Las claves llevan el prefijo "ss-" para que el wrapper ("ms-ss-tipo") y el
+// desplegable interno ("msd-ss-tipo") coincidan con lo que espera toggleMS().
+const SEL_SSOMA={'ss-tipo':new Set(),'ss-generante':new Set(),'ss-empresa':new Set(),'ss-unnegocio':new Set(),'ss-estado':new Set(),'ss-informe':new Set()};
+const MS_PLACEHOLDERS_SSOMA={'ss-tipo':'Tipo','ss-generante':'Generante','ss-empresa':'Empresa','ss-unnegocio':'Unidad negocio','ss-estado':'Estado investigación','ss-informe':'Informe final'};
 let msOptsSSOMA={};
 
 function buildMSSSOMA(wrapperId, selKey, options, placeholder='Seleccionar...'){
@@ -2732,24 +2734,35 @@ async function cargarSSOMA(){
 const SSOMA_ESTADO_OPTS = [{v:'CERRADO',l:'Cerrado'},{v:'ABIERTO',l:'En proceso'},{v:'SINPROC',l:'Sin procesar'}];
 const SSOMA_INFORME_OPTS = [{v:'CON',l:'Con informe'},{v:'SIN',l:'Sin informe'}];
 
-function poblarFiltrosSSOMA(data){
-  const sets={tipo:new Set(),generante:new Set(),empresa:new Set(),unnegocio:new Set()};
-  data.forEach(r=>{
-    if(r.tipo && r.tipo.trim()) sets.tipo.add(r.tipo.trim());
-    if(r.generante && r.generante.trim()) sets.generante.add(r.generante.trim());
-    if(r.empresa && r.empresa.trim()) sets.empresa.add(r.empresa.trim());
-    if(r.unNegocio && r.unNegocio.trim()) sets.unnegocio.add(r.unNegocio.trim());
-  });
-  const toOpts=set=>[...set].sort((a,b)=>String(a).localeCompare(String(b))).map(v=>({v,l:v}));
-  msOptsSSOMA.tipo = toOpts(sets.tipo);
-  msOptsSSOMA.generante = toOpts(sets.generante);
-  msOptsSSOMA.empresa = toOpts(sets.empresa);
-  msOptsSSOMA.unnegocio = toOpts(sets.unnegocio);
-  msOptsSSOMA.estado = SSOMA_ESTADO_OPTS;
-  msOptsSSOMA.informe = SSOMA_INFORME_OPTS;
+// Normaliza texto libre para agrupar variantes de escritura (espacios/mayúsculas)
+// sin alterar el dato original que se muestra en la tabla — solo agrupa opciones de filtro.
+function normLibre(v){ return String(v||'').toUpperCase().replace(/\s+/g,'').trim(); }
 
+function poblarFiltrosSSOMA(data){
+  // Mapa: clave normalizada -> {label: variante más frecuente, count}
+  const agrupar = (valores) => {
+    const map = new Map();
+    valores.forEach(v=>{
+      const val = String(v||'').trim();
+      if(!val) return;
+      const k = normLibre(val);
+      if(!map.has(k)) map.set(k, {label:val, count:1});
+      else map.get(k).count++;
+    });
+    return [...map.entries()]
+      .map(([k,o])=>({v:k, l:o.label}))
+      .sort((a,b)=>a.l.localeCompare(b.l));
+  };
+  msOptsSSOMA['ss-tipo'] = agrupar(data.map(r=>r.tipo));
+  msOptsSSOMA['ss-generante'] = agrupar(data.map(r=>r.generante));
+  msOptsSSOMA['ss-empresa'] = agrupar(data.map(r=>r.empresa));
+  msOptsSSOMA['ss-unnegocio'] = agrupar(data.map(r=>r.unNegocio));
+  msOptsSSOMA['ss-estado'] = SSOMA_ESTADO_OPTS;
+  msOptsSSOMA['ss-informe'] = SSOMA_INFORME_OPTS;
+
+  // wrapperId = 'ms-'+selKey, igual patrón que Hallazgos, para que toggleMS() encuentre el desplegable
   Object.keys(msOptsSSOMA).forEach(key=>{
-    buildMSSSOMA('ms-ss-'+key, key, msOptsSSOMA[key], MS_PLACEHOLDERS_SSOMA[key]);
+    buildMSSSOMA('ms-'+key, key, msOptsSSOMA[key], MS_PLACEHOLDERS_SSOMA[key]);
   });
 }
 
@@ -2758,17 +2771,17 @@ function aplicarFiltrosSSOMA(){
   const hasta = document.getElementById('ssf-hasta').value ? new Date(document.getElementById('ssf-hasta').value) : null;
 
   filtradosSSOMA = rawSSOMA.filter(r => {
-    if(SEL_SSOMA.tipo.size && !SEL_SSOMA.tipo.has((r.tipo||'').trim())) return false;
-    if(SEL_SSOMA.generante.size && !SEL_SSOMA.generante.has((r.generante||'').trim())) return false;
-    if(SEL_SSOMA.empresa.size && !SEL_SSOMA.empresa.has((r.empresa||'').trim())) return false;
-    if(SEL_SSOMA.unnegocio.size && !SEL_SSOMA.unnegocio.has((r.unNegocio||'').trim())) return false;
-    if(SEL_SSOMA.estado.size){
+    if(SEL_SSOMA['ss-tipo'].size && !SEL_SSOMA['ss-tipo'].has(normLibre(r.tipo))) return false;
+    if(SEL_SSOMA['ss-generante'].size && !SEL_SSOMA['ss-generante'].has(normLibre(r.generante))) return false;
+    if(SEL_SSOMA['ss-empresa'].size && !SEL_SSOMA['ss-empresa'].has(normLibre(r.empresa))) return false;
+    if(SEL_SSOMA['ss-unnegocio'].size && !SEL_SSOMA['ss-unnegocio'].has(normLibre(r.unNegocio))) return false;
+    if(SEL_SSOMA['ss-estado'].size){
       const estKey = (r.estadoFinal==='CERRADO'||r.estadoFinal==='ABIERTO') ? r.estadoFinal : 'SINPROC';
-      if(!SEL_SSOMA.estado.has(estKey)) return false;
+      if(!SEL_SSOMA['ss-estado'].has(estKey)) return false;
     }
-    if(SEL_SSOMA.informe.size){
+    if(SEL_SSOMA['ss-informe'].size){
       const tieneInf = r.informeFinal && !r.informeFinal.toUpperCase().includes('SIN INFORME');
-      if(!SEL_SSOMA.informe.has(tieneInf ? 'CON' : 'SIN')) return false;
+      if(!SEL_SSOMA['ss-informe'].has(tieneInf ? 'CON' : 'SIN')) return false;
     }
     const d = parseDate(r.fecha);
     if(desde && d && d < desde) return false;
