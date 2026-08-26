@@ -293,6 +293,54 @@ tbody tr:hover td{background:var(--surface2)}
 .urole.responsable{background:#378ADD;color:#fff;font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:10px}
 .urole.lectura{background:rgba(255,255,255,.15);color:#ccc;font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:10px}
 
+
+/* ══════════ MÓDULO SSOMA — ACC./INCIDENTES ══════════ */
+.ssoma-pill-acc{background:#FFE4E4;color:#7a0000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.ssoma-pill-inc{background:#FFF3CD;color:#7a4000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.ssoma-pill-casi{background:var(--green-bg);color:var(--green-text);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.ssoma-pill-cerrado{background:var(--green-bg);color:var(--green-text);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.ssoma-pill-abierto{background:var(--amber-bg);color:var(--amber-text);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.ssoma-pill-sinproc{background:var(--red-bg);color:var(--red-text);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.ssoma-pill-coninf{background:var(--green-bg);color:var(--green-text);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.ssoma-pill-sininf{background:var(--red-bg);color:var(--red-text);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+
+.tecnico-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.tecnico-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px 16px}
+.tecnico-card-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.tecnico-av{width:32px;height:32px;border-radius:50%;background:#1a1a1a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.tecnico-name{font-size:12px;font-weight:600;flex:1}
+.tecnico-total{font-size:11px;color:var(--text3)}
+.tecnico-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.tecnico-bar-label{font-size:10px;color:var(--text2);width:90px;flex-shrink:0}
+.tecnico-bar-track{flex:1;height:10px;background:var(--border);border-radius:5px;overflow:hidden;position:relative}
+.tecnico-bar-fill{height:100%;border-radius:5px;transition:width .3s}
+.tecnico-bar-val{font-size:10px;font-weight:700;width:30px;text-align:right}
+.tecnico-stats{display:flex;gap:10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.tecnico-stat{font-size:10px;text-align:center;flex:1}
+.tecnico-stat .n{font-size:16px;font-weight:700;display:block}
+.tecnico-stat .l{color:var(--text3)}
+
+.vinculo-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:700;align-items:center;justify-content:center;padding:20px}
+.vinculo-overlay.open{display:flex}
+.vinculo-card{background:var(--surface);border-radius:var(--rl);overflow:hidden;max-width:900px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.vinculo-hdr{padding:12px 18px;background:#1a1a1a;color:#fff;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.vinculo-hdr button{margin-left:auto;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:11px;padding:4px 10px;border-radius:4px;cursor:pointer}
+.vinculo-body{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.vinculo-side{padding:14px 18px}
+.vinculo-side:first-child{border-right:1px solid var(--border)}
+.vinculo-side-title{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.vinculo-row{font-size:11px;display:flex;gap:8px;margin-bottom:6px}
+.vinculo-row label{color:var(--text3);min-width:110px;flex-shrink:0}
+.vinculo-row span{color:var(--text);font-weight:500}
+.vinculo-accion-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px}
+.vinculo-accion-card .cod{font-size:10px;font-weight:700;color:var(--blue);margin-bottom:4px}
+.vinculo-accion-card .desc{font-size:11px;color:var(--text);margin-bottom:6px;line-height:1.4}
+.vinculo-accion-card .meta{font-size:10px;color:var(--text3);margin-bottom:6px}
+.vinculo-accion-card .campos{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.vinculo-accion-card .campo-mini{display:flex;flex-direction:column;gap:2px}
+.vinculo-accion-card .campo-mini label{font-size:9px;color:var(--text3);text-transform:uppercase}
+.vinculo-link-btn{font-size:10px;color:var(--blue);text-decoration:none;font-weight:600;cursor:pointer;background:none;border:none;padding:0}
+.vinculo-link-btn:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -318,7 +366,7 @@ tbody tr:hover td{background:var(--surface2)}
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar</button>
     <div class="login-error" id="login-error"></div>
-    <div class="login-version">REV 07 · 11/05/2026</div>
+    <div class="login-version">REV 08 · 26/08/2026</div>
   </div>
 </div>
 
@@ -328,7 +376,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div style="display:flex;align-items:center;gap:16px">
       <span class="logo-badge">GRIFFOULIERE</span>
       <span style="color:white;font-size:15px;font-weight:600">Tablero de Hallazgos SGI</span>
-      <span style="color:#888;font-size:11px">REV 03 &nbsp;·&nbsp; 29/07/2026</span>
+      <span style="color:#888;font-size:11px">REV 04 &nbsp;·&nbsp; 26/08/2026</span>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
       <div id="user-bar" style="display:none;align-items:center;gap:8px;color:#ccc;font-size:13px">
@@ -412,6 +460,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="tab" onclick="switchTab('detalle',this)"><i class="ti ti-table" style="font-size:12px"></i> Detalle</div>
     <div class="tab" onclick="switchTab('plan',this)"><i class="ti ti-file-description" style="font-size:12px"></i> Plan de Acción</div>
     <div class="tab" onclick="switchTab('verificaciones',this)"><i class="ti ti-eye-check" style="font-size:12px"></i> Verificaciones</div>
+    <div class="tab" onclick="switchTab('ssoma',this)"><i class="ti ti-alert-triangle" style="font-size:12px"></i> Acc./Incidentes</div>
     <div class="tab" id="tab-log-btn" onclick="switchTab('log',this)" style="display:none"><i class="ti ti-history" style="font-size:12px"></i> Log de cambios</div>
     <div class="tab" id="tab-usr-btn" onclick="switchTab('usuarios',this)" style="display:none"><i class="ti ti-users" style="font-size:12px"></i> Usuarios</div>
   </div>
@@ -524,6 +573,56 @@ tbody tr:hover td{background:var(--surface2)}
     <div id="verif-kpis" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div>
     <div id="verif-container"></div>
   </div>
+
+  <!-- ═══════════ TAB SSOMA — ACC./INCIDENTES ═══════════ -->
+  <div class="tcontent" id="tab-ssoma">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">Accidentes e Incidentes</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px" id="ssoma-subtitle">Cargando...</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-green" onclick="exportarSSOMAExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+      </div>
+    </div>
+
+    <div class="kpis" id="ssoma-kpis" style="margin-bottom:16px"></div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--red);display:inline-block">Estado de cierre por técnico generante</div>
+    <div class="tecnico-grid" id="ssoma-tecnico-grid" style="margin-bottom:16px"></div>
+
+    <div class="tbl-card">
+      <div class="tbl-hdr">
+        <div class="ct">Registro de eventos</div>
+      </div>
+      <div class="twrap">
+        <table>
+          <thead><tr>
+            <th>N°</th><th>Fecha</th><th>Tipo</th><th>Severidad</th>
+            <th>Generante</th><th>Involucrado</th><th>Unidad negocio</th>
+            <th>Días perd.</th><th>ART</th><th>Estado</th><th>Inf. Final</th><th>Acciones vinc.</th>
+          </tr></thead>
+          <tbody id="ssoma-tbody"><tr><td colspan="12" class="empty">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ MODAL VÍNCULO INFORME ↔ ACCIONES CORRECTIVAS ═══════════ -->
+  <div class="vinculo-overlay" id="vinculo-overlay" onclick="if(event.target===this)cerrarVinculo()">
+    <div class="vinculo-card">
+      <div class="vinculo-hdr">
+        <i class="ti ti-link"></i>
+        <span id="vinculo-titulo">Informe Preliminar</span>
+        <button onclick="cerrarVinculo()">✕ Cerrar</button>
+      </div>
+      <div class="vinculo-body">
+        <div class="vinculo-side" id="vinculo-preliminar"></div>
+        <div class="vinculo-side" id="vinculo-acciones"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="tcontent" id="tab-log">
     <div class="tbl-card">
       <div class="tbl-hdr">
@@ -653,6 +752,7 @@ function switchTab(id,el){
   if(id==='detalle' && filtrados.length) renderTabla(filtrados);
   if(id==='plan' && filtrados.length) renderPlan(filtrados);
   if(id==='verificaciones') renderVerificaciones(filtrados);
+  if(id==='ssoma') cargarSSOMA();
 }
 
 async function cargarLogSheet(){
@@ -2423,6 +2523,318 @@ document.addEventListener('DOMContentLoaded', () => { inicializar(); setTimeout(
 }
 
 // recargar() se llama desde doLogin()
+
+// ══════════════════════════════════════════════════════════════════════
+//  MÓDULO SSOMA — ACCIDENTES / INCIDENTES  (NUEVO)
+// ══════════════════════════════════════════════════════════════════════
+
+let rawSSOMA = [], rawAccionesSSOMA = [], accionesPorPreliminar = {}, ssomaCargado = false;
+
+function mapRowSSOMA(r){
+  return {
+    serial:        r['Serial Number'] || '',
+    fecha:         r['Fecha de generacion'] || '',
+    hora:          r['Hora'] || '',
+    direccion:     r['Dirección'] || '',
+    localidad:     r['Localidad'] || '',
+    provincia:     r['Provincia'] || '',
+    unNegocio:     r['Unidad de negocio - unidadDeNegocio'] || '',
+    generante:     r['Genera - APELLIDOYNOMBRE'] || '',
+    tipo:          r['Tipo Incidente/Accidente'] || '',
+    m3Derramados:  r['Cantidad m3 Derramados'] || '',
+    lesiones:      r['Lesiones'] || '',
+    severidad:     r['Severidad'] || '',
+    operacion:     r['Operacion'] || '',
+    involucrado:   r['Nombre y Apellido - APELLIDOYNOMBRE'] || '',
+    cargo:         r['Cargo'] || '',
+    empresa:       r['Empresa'] || '',
+    descripcion:   r['Breve descripción'] || '',
+    perdidas:      r['Pérdidas Económicas'] || '',
+    tipoContacto:  r['Tipo de contacto'] || '',
+    detalle:       r['Detalle'] || '',
+    accionInmed:   r['Acción Inmediata'] || '',
+    estadoFinal:   (r['ESTADO FINAL'] || '').toString().trim().toUpperCase(),
+    informeFinal:  (r['Informe Final'] || '').toString().trim(),
+    severidadPot:  r['Nivel de Severidad Potencial'] || '',
+    art:           r['ART(si/no)'] || '',
+    diasPerdidos:  r['Dias Perdidos (CANTIDAD DE DIAS)'] || '',
+    eventoEn:      r['EVENTO EN'] || '',
+    categoria:     r['Categoria'] || '',
+    culpabilidad:  r['Culpabilidad'] || '',
+  };
+}
+
+function mapRowAccionSSOMA(r){
+  return {
+    serial:        r['Serial Number'] || '',
+    numPreliminar: String(r['Numero de Hallazgo/Preliminar de Accidente'] || '').trim(),
+    respSector:    r['Resp. del Sector - APELLIDOYNOMBRE'] || '',
+    causaRaiz:     r['Descripción de la Causa Raiz'] || '',
+    criticidad:    r['Criticidad'] || '',
+    factor:        r['Acción - Factor'] || '',
+    accionDesc:    r['Acción - Descripción de la acción correctiva (La acción correctiva no debe ser igual a la corrección pues la acción correctiva elimina la causa)'] || '',
+    respImpl:      r['Resp. Implementación - APELLIDOYNOMBRE'] || '',
+    fImpl:         r['Fecha implementación'] || '',
+    estAcc:        (r['ESTADO (LO ACTUALIZA EL RESPONSABLE)'] || '').toString().trim(),
+    fCierre:       r['Fecha de Cierre'] || '',
+    obsCierre:     r['Observaciones -cierre'] || '',
+    estVerif:      (r['Estado de la verificacion'] || '').toString().trim(),
+    obsVerif:      r['verificación eficacia / Observaciones'] || '',
+    codigoAccion:  String(r['N FORMULARIO X'] || '').trim(),
+  };
+}
+
+async function cargarSSOMA(){
+  if(ssomaCargado) return;
+  const tbody = document.getElementById('ssoma-tbody');
+  try{
+    const [resPre, resAcc] = await Promise.all([
+      fetch(API_URL() + '?action=getSSOMA'),
+      fetch(API_URL() + '?action=getAccionesSSOMA')
+    ]);
+    const jsonPre = await resPre.json();
+    const jsonAcc = await resAcc.json();
+    if(!Array.isArray(jsonPre)) throw new Error(jsonPre.error || 'Error al leer BD-INFORME PRELIMINAR');
+    if(!Array.isArray(jsonAcc)) throw new Error(jsonAcc.error || 'Error al leer REGISTRO DE ACCIONES');
+
+    rawSSOMA = jsonPre.map(mapRowSSOMA).filter(r => r.serial);
+    rawAccionesSSOMA = jsonAcc.map(mapRowAccionSSOMA).filter(r => r.codigoAccion);
+
+    accionesPorPreliminar = {};
+    rawAccionesSSOMA.forEach(a => {
+      if(!a.numPreliminar) return;
+      (accionesPorPreliminar[a.numPreliminar] ||= []).push(a);
+    });
+
+    ssomaCargado = true;
+    renderSSOMAKpis(rawSSOMA);
+    renderTecnicoGenerante(rawSSOMA);
+    renderTablaSSOMA(rawSSOMA);
+    document.getElementById('ssoma-subtitle').textContent = `${rawSSOMA.length} eventos · ${rawAccionesSSOMA.length} acciones correctivas`;
+  }catch(e){
+    tbody.innerHTML = `<tr><td colspan="12" class="empty">Error al cargar: ${e.message}</td></tr>`;
+    document.getElementById('ssoma-subtitle').textContent = 'Error al cargar datos SSOMA';
+    console.error(e);
+  }
+}
+
+function ssomaPillTipo(t){
+  const v = (t||'').toLowerCase();
+  if(v.includes('accidente')) return `<span class="ssoma-pill-acc">${t}</span>`;
+  if(v.includes('incidente')) return `<span class="ssoma-pill-inc">${t}</span>`;
+  if(v.includes('casi')) return `<span class="ssoma-pill-casi">${t}</span>`;
+  return `<span class="pill p-obs">${t||'—'}</span>`;
+}
+
+function ssomaPillEstadoFinal(e){
+  if(e === 'CERRADO') return `<span class="ssoma-pill-cerrado">CERRADO</span>`;
+  if(e === 'ABIERTO') return `<span class="ssoma-pill-abierto">ABIERTO</span>`;
+  return `<span class="ssoma-pill-sinproc">SIN PROCESAR</span>`;
+}
+
+function ssomaPillInforme(inf){
+  const v = (inf||'').toUpperCase();
+  if(v.includes('SIN INFORME')) return `<span class="ssoma-pill-sininf">SIN INFORME</span>`;
+  if(v) return `<span class="ssoma-pill-coninf">CON INFORME</span>`;
+  return `<span class="ssoma-pill-sininf">SIN INFORME</span>`;
+}
+
+function renderSSOMAKpis(data){
+  const total = data.length;
+  const accidentes = data.filter(r => (r.tipo||'').toLowerCase().includes('accidente')).length;
+  const incidentes = data.filter(r => (r.tipo||'').toLowerCase().includes('incidente') && !(r.tipo||'').toLowerCase().includes('accidente')).length;
+  const casiAcc = data.filter(r => (r.tipo||'').toLowerCase().includes('casi')).length;
+  const diasPerd = data.reduce((s,r) => s + (parseInt(r.diasPerdidos) || 0), 0);
+  const conART = data.filter(r => (r.art||'').toString().trim().toLowerCase() === 'si' || (r.art||'').toString().trim().toLowerCase() === 'sí').length;
+  const cerrados = data.filter(r => r.estadoFinal === 'CERRADO').length;
+  const abiertos = data.filter(r => r.estadoFinal === 'ABIERTO').length;
+  const sinProc = data.filter(r => r.estadoFinal !== 'CERRADO' && r.estadoFinal !== 'ABIERTO').length;
+  const conInf = data.filter(r => r.informeFinal && !r.informeFinal.toUpperCase().includes('SIN INFORME')).length;
+  const sinInf = total - conInf;
+
+  const pct = (n) => total ? Math.round(n/total*100) : 0;
+
+  document.getElementById('ssoma-kpis').innerHTML = `
+    <div class="kpi"><div class="lbl">Total eventos</div><div class="val">${total}</div><div class="sub">todos los registros</div></div>
+    <div class="kpi danger"><div class="lbl">Accidentes</div><div class="val">${accidentes}</div><div class="sub">${pct(accidentes)}% del total</div></div>
+    <div class="kpi warn"><div class="lbl">Incidentes</div><div class="val">${incidentes}</div><div class="sub">${pct(incidentes)}% del total</div></div>
+    <div class="kpi ok"><div class="lbl">Casi accidentes</div><div class="val">${casiAcc}</div><div class="sub">${pct(casiAcc)}% del total</div></div>
+    <div class="kpi danger"><div class="lbl">Días perdidos</div><div class="val">${diasPerd}</div><div class="sub">acumulado</div></div>
+    <div class="kpi"><div class="lbl">ART involucrada</div><div class="val">${conART}</div><div class="sub">eventos con ART</div></div>
+    <div class="kpi ok"><div class="lbl">Cerrados</div><div class="val">${cerrados}</div><div class="sub">${pct(cerrados)}% del total</div></div>
+    <div class="kpi warn"><div class="lbl">En proceso</div><div class="val">${abiertos}</div><div class="sub">${pct(abiertos)}% del total</div></div>
+    <div class="kpi danger"><div class="lbl">Sin procesar</div><div class="val">${sinProc}</div><div class="sub">${pct(sinProc)}% del total</div></div>
+    <div class="kpi ok"><div class="lbl">Con inf. final</div><div class="val">${conInf}</div><div class="sub">${pct(conInf)}% del total</div></div>
+    <div class="kpi danger"><div class="lbl">Sin inf. final</div><div class="val">${sinInf}</div><div class="sub">${pct(sinInf)}% del total</div></div>
+  `;
+}
+
+function renderTecnicoGenerante(data){
+  const porTecnico = {};
+  data.forEach(r => {
+    const nombre = (r.generante || 'Sin asignar').trim();
+    if(!porTecnico[nombre]) porTecnico[nombre] = { total:0, cerrados:0, abiertos:0, sinProc:0 };
+    const t = porTecnico[nombre];
+    t.total++;
+    if(r.estadoFinal === 'CERRADO') t.cerrados++;
+    else if(r.estadoFinal === 'ABIERTO') t.abiertos++;
+    else t.sinProc++;
+  });
+
+  const nombres = Object.keys(porTecnico).sort((a,b) => porTecnico[b].total - porTecnico[a].total);
+
+  document.getElementById('ssoma-tecnico-grid').innerHTML = nombres.map(nombre => {
+    const t = porTecnico[nombre];
+    const pctCierre = t.total ? Math.round(t.cerrados / t.total * 100) : 0;
+    const colorPct = pctCierre >= 70 ? 'var(--green)' : pctCierre >= 40 ? 'var(--amber)' : 'var(--red)';
+    return `<div class="tecnico-card">
+      <div class="tecnico-card-hdr">
+        <div class="tecnico-av">${initials(nombre)}</div>
+        <div>
+          <div class="tecnico-name">${nombre}</div>
+          <div class="tecnico-total">${t.total} informes preliminares</div>
+        </div>
+        <div style="margin-left:auto;font-size:18px;font-weight:700;color:${colorPct}">${pctCierre}%</div>
+      </div>
+      <div class="tecnico-bar-row">
+        <div class="tecnico-bar-label">Cerrados</div>
+        <div class="tecnico-bar-track"><div class="tecnico-bar-fill" style="width:${pctCierre}%;background:var(--green)"></div></div>
+        <div class="tecnico-bar-val" style="color:var(--green)">${t.cerrados}</div>
+      </div>
+      <div class="tecnico-stats">
+        <div class="tecnico-stat"><span class="n" style="color:var(--green)">${t.cerrados}</span><span class="l">Cerrados</span></div>
+        <div class="tecnico-stat"><span class="n" style="color:var(--amber)">${t.abiertos}</span><span class="l">En proceso</span></div>
+        <div class="tecnico-stat"><span class="n" style="color:var(--red)">${t.sinProc}</span><span class="l">Sin procesar</span></div>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty" style="grid-column:1/-1">Sin datos</div>';
+}
+
+function renderTablaSSOMA(data){
+  const tbody = document.getElementById('ssoma-tbody');
+  if(!data.length){ tbody.innerHTML = '<tr><td colspan="12" class="empty">Sin registros</td></tr>'; return; }
+  tbody.innerHTML = data.map(r => {
+    const nAcciones = (accionesPorPreliminar[String(r.serial)] || []).length;
+    const accionesBtn = nAcciones
+      ? `<button class="vinculo-link-btn" onclick="abrirVinculo('${String(r.serial).replace(/'/g,"\\'")}')">${nAcciones} acción${nAcciones>1?'es':''} →</button>`
+      : '<span style="color:var(--text3);font-size:10px">—</span>';
+    return `<tr>
+      <td><strong>${r.serial}</strong></td>
+      <td style="font-size:11px;white-space:nowrap">${fmtDate(r.fecha)}</td>
+      <td>${ssomaPillTipo(r.tipo)}</td>
+      <td style="font-size:11px">${r.severidad||'—'}</td>
+      <td style="font-size:11px;white-space:nowrap">${r.generante||'—'}</td>
+      <td style="font-size:11px;white-space:nowrap">${r.involucrado||'—'}</td>
+      <td style="font-size:11px;max-width:160px">${r.unNegocio||'—'}</td>
+      <td style="text-align:center;font-weight:700;color:${parseInt(r.diasPerdidos)>0?'var(--red)':'var(--text3)'}">${r.diasPerdidos||0}</td>
+      <td style="text-align:center;font-size:11px">${r.art||'—'}</td>
+      <td>${ssomaPillEstadoFinal(r.estadoFinal)}</td>
+      <td>${ssomaPillInforme(r.informeFinal)}</td>
+      <td>${accionesBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirVinculo(serial){
+  const pre = rawSSOMA.find(r => String(r.serial) === String(serial));
+  const acciones = accionesPorPreliminar[String(serial)] || [];
+  if(!pre) return;
+
+  document.getElementById('vinculo-titulo').textContent = `Informe Preliminar N° ${serial}`;
+
+  document.getElementById('vinculo-preliminar').innerHTML = `
+    <div class="vinculo-side-title">Datos del evento</div>
+    <div class="vinculo-row"><label>Fecha</label><span>${fmtDate(pre.fecha)} ${pre.hora||''}</span></div>
+    <div class="vinculo-row"><label>Tipo</label><span>${ssomaPillTipo(pre.tipo)}</span></div>
+    <div class="vinculo-row"><label>Generante</label><span>${pre.generante||'—'}</span></div>
+    <div class="vinculo-row"><label>Involucrado</label><span>${pre.involucrado||'—'}</span></div>
+    <div class="vinculo-row"><label>Unidad negocio</label><span>${pre.unNegocio||'—'}</span></div>
+    <div class="vinculo-row"><label>Severidad real</label><span>${pre.severidad||'—'}</span></div>
+    <div class="vinculo-row"><label>Estado investigación</label><span>${ssomaPillEstadoFinal(pre.estadoFinal)}</span></div>
+    <div class="vinculo-row"><label>Informe final</label><span>${ssomaPillInforme(pre.informeFinal)}</span></div>
+    <div class="vinculo-row" style="align-items:flex-start"><label>Descripción</label><span style="font-size:10px;line-height:1.4;font-weight:400">${pre.descripcion||'—'}</span></div>
+  `;
+
+  document.getElementById('vinculo-acciones').innerHTML = `
+    <div class="vinculo-side-title">Acciones correctivas vinculadas (${acciones.length})</div>
+    ${acciones.length ? acciones.map(a => vinculoAccionCard(a)).join('') : '<div class="empty">Sin acciones registradas</div>'}
+  `;
+
+  document.getElementById('vinculo-overlay').classList.add('open');
+}
+
+function cerrarVinculo(){
+  document.getElementById('vinculo-overlay').classList.remove('open');
+}
+
+function vinculoAccionCard(a){
+  const puedeEditar = SESSION && (SESSION.rol === 'admin' || SESSION.rol === 'responsable');
+  const estMap = {'FINALIZADO':'p-fin','EN CURSO':'p-cur','PENDIENTE':'p-pen'};
+  const estCls = estMap[(a.estAcc||'').toUpperCase()] || 'p-obs';
+
+  const estSelect = puedeEditar
+    ? `<select class="edit-date" style="width:100%" onchange="saveFieldSSOMA('${a.codigoAccion}','estAcc',this.value,this)">
+         <option value="">—</option>
+         <option value="PENDIENTE" ${a.estAcc==='PENDIENTE'?'selected':''}>Pendiente</option>
+         <option value="EN CURSO" ${a.estAcc==='EN CURSO'?'selected':''}>En curso</option>
+         <option value="FINALIZADO" ${a.estAcc==='FINALIZADO'?'selected':''}>Finalizado</option>
+       </select>`
+    : `<span class="pill ${estCls}">${a.estAcc||'—'}</span>`;
+
+  const fImplInput = puedeEditar
+    ? `<input type="date" class="edit-date" value="${a.fImpl?String(a.fImpl).split('T')[0]:''}" onchange="saveFieldSSOMA('${a.codigoAccion}','fImpl',this.value,this)">`
+    : `<span>${fmtDate(a.fImpl)}</span>`;
+
+  const estVerifSelect = (SESSION && SESSION.rol === 'admin')
+    ? `<select class="edit-date" style="width:100%" onchange="saveFieldSSOMA('${a.codigoAccion}','estVerif',this.value,this)">
+         <option value="">Sin verificar</option>
+         <option value="Verifica" ${a.estVerif==='Verifica'?'selected':''}>Verifica</option>
+         <option value="No Verifica" ${a.estVerif==='No Verifica'?'selected':''}>No Verifica</option>
+       </select>`
+    : `<span>${a.estVerif||'Sin verificar'}</span>`;
+
+  return `<div class="vinculo-accion-card">
+    <div class="cod">${a.codigoAccion || '—'}</div>
+    <div class="desc">${a.accionDesc || '—'}</div>
+    <div class="meta">Resp: ${a.respImpl||'—'} · Sector: ${a.respSector||'—'} · Criticidad: ${a.criticidad||'—'}</div>
+    <div class="campos">
+      <div class="campo-mini"><label>Estado</label>${estSelect}</div>
+      <div class="campo-mini"><label>Fecha impl.</label>${fImplInput}</div>
+      <div class="campo-mini"><label>Verif. eficacia</label>${estVerifSelect}</div>
+      <div class="campo-mini"><label>Fecha cierre</label><span>${fmtDate(a.fCierre)}</span></div>
+    </div>
+  </div>`;
+}
+
+async function saveFieldSSOMA(codigoAccion, campo, valor, el){
+  const accion = rawAccionesSSOMA.find(a => a.codigoAccion === codigoAccion);
+  if(accion) accion[campo] = valor;
+  try{
+    const p = new URLSearchParams({ action:'updateSSOMA', codigoAccion, campo, valor });
+    await fetch(API_URL() + '?' + p.toString());
+    toast('✓ Guardado');
+    renderSSOMAKpis(rawSSOMA);
+    renderTecnicoGenerante(rawSSOMA);
+  }catch(e){
+    toast('⚠ No se pudo guardar', 3000);
+  }
+}
+
+function exportarSSOMAExcel(){
+  if(!rawSSOMA.length){ toast('Sin datos para exportar'); return; }
+  const filas = rawSSOMA.map(r => ({
+    'N°': r.serial, 'Fecha': fmtDate(r.fecha), 'Tipo': r.tipo, 'Severidad': r.severidad,
+    'Generante': r.generante, 'Involucrado': r.involucrado, 'Unidad negocio': r.unNegocio,
+    'Descripción': (r.descripcion||'').substring(0,300), 'Días perdidos': r.diasPerdidos,
+    'ART': r.art, 'Estado': r.estadoFinal, 'Informe final': r.informeFinal
+  }));
+  const ws = XLSX.utils.json_to_sheet(filas);
+  ws['!cols'] = Array(12).fill({wch:20});
+  const wb2 = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb2, ws, 'Accidentes Incidentes');
+  XLSX.writeFile(wb2, `SSOMA_${new Date().toLocaleDateString('es-AR').replace(/\//g,'-')}.xlsx`);
+  toast('Excel exportado ✓');
+}
 </script>
 </body>
 </html>
