@@ -343,8 +343,8 @@ tbody tr:hover td{background:var(--surface2)}
 .vinculo-link-btn:hover{text-decoration:underline}
 
 .ssoma-filtros .fgrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
-.ssoma-filtros select, .ssoma-filtros input[type=date]{width:100%;font-size:11px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);outline:none;cursor:pointer}
-.ssoma-filtros select:focus, .ssoma-filtros input[type=date]:focus{border-color:var(--blue)}
+.ssoma-filtros input[type=date]{width:100%;font-size:11px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);outline:none;cursor:pointer}
+.ssoma-filtros input[type=date]:focus{border-color:var(--blue)}
 </style>
 </head>
 <body>
@@ -593,32 +593,12 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="filters-bar ssoma-filtros">
       <div class="ftitle"><i class="ti ti-filter" style="font-size:11px"></i> Filtros — Accidentes/Incidentes</div>
       <div class="fgrid">
-        <div class="fi"><label>Tipo</label>
-          <select id="ssf-tipo" onchange="aplicarFiltrosSSOMA()">
-            <option value="">Todos</option>
-            <option value="accidente">Accidente</option>
-            <option value="incidente">Incidente</option>
-            <option value="casi">Casi accidente</option>
-          </select>
-        </div>
-        <div class="fi"><label>Generante</label><select id="ssf-generante" onchange="aplicarFiltrosSSOMA()"><option value="">Todos</option></select></div>
-        <div class="fi"><label>Empresa</label><select id="ssf-empresa" onchange="aplicarFiltrosSSOMA()"><option value="">Todas</option></select></div>
-        <div class="fi"><label>Unidad de negocio</label><select id="ssf-unnegocio" onchange="aplicarFiltrosSSOMA()"><option value="">Todas</option></select></div>
-        <div class="fi"><label>Estado investigación</label>
-          <select id="ssf-estado" onchange="aplicarFiltrosSSOMA()">
-            <option value="">Todos</option>
-            <option value="CERRADO">Cerrado</option>
-            <option value="ABIERTO">En proceso</option>
-            <option value="SINPROC">Sin procesar</option>
-          </select>
-        </div>
-        <div class="fi"><label>Informe final</label>
-          <select id="ssf-informe" onchange="aplicarFiltrosSSOMA()">
-            <option value="">Todos</option>
-            <option value="CON">Con informe</option>
-            <option value="SIN">Sin informe</option>
-          </select>
-        </div>
+        <div class="fi"><label>Tipo</label><div class="ms-wrapper" id="ms-ss-tipo"></div></div>
+        <div class="fi"><label>Generante</label><div class="ms-wrapper" id="ms-ss-generante"></div></div>
+        <div class="fi"><label>Empresa</label><div class="ms-wrapper" id="ms-ss-empresa"></div></div>
+        <div class="fi"><label>Unidad de negocio</label><div class="ms-wrapper" id="ms-ss-unnegocio"></div></div>
+        <div class="fi"><label>Estado investigación</label><div class="ms-wrapper" id="ms-ss-estado"></div></div>
+        <div class="fi"><label>Informe final</label><div class="ms-wrapper" id="ms-ss-informe"></div></div>
         <div class="fi" style="grid-column:span 2">
           <label>Rango de fechas</label>
           <div class="fdate">
@@ -1028,6 +1008,78 @@ document.addEventListener('click',e=>{
 
 const MS_PLACEHOLDERS={empresa:'Empresa',un:'Unidad negocio',depto:'Departamento',tipo:'Tipo',origen:'Origen',estcorr:'Estado correc.',estacc:'Estado acción',crit:'Criticidad',resp:'Resp. directo',venc:'Vencimiento',respcorr:'Resp. corrección',respacc:'Resp. acción correctiva',codigo:'Código único'};
 let msOpts={};
+
+// ─── MULTI-SELECT ENGINE — SSOMA (estado propio, no interfiere con Hallazgos) ──
+const SEL_SSOMA={tipo:new Set(),generante:new Set(),empresa:new Set(),unnegocio:new Set(),estado:new Set(),informe:new Set()};
+const MS_PLACEHOLDERS_SSOMA={tipo:'Tipo',generante:'Generante',empresa:'Empresa',unnegocio:'Unidad negocio',estado:'Estado investigación',informe:'Informe final'};
+let msOptsSSOMA={};
+
+function buildMSSSOMA(wrapperId, selKey, options, placeholder='Seleccionar...'){
+  const wrapper=document.getElementById(wrapperId);
+  if(!wrapper)return;
+  wrapper.innerHTML=`
+    <div class="ms-trigger" onclick="toggleMS('${wrapperId}')">
+      <span class="ms-label" id="msl-${selKey}">${placeholder}</span>
+      <span class="ms-arrow">▼</span>
+    </div>
+    <div class="ms-dropdown" id="msd-${selKey}">
+      <div class="ms-search"><input type="text" placeholder="Buscar..." oninput="filterMSSSOMA('${selKey}',this.value)" onclick="event.stopPropagation()"></div>
+      <div class="ms-options" id="mso-${selKey}"></div>
+      <div class="ms-actions">
+        <button onclick="selectAllMSSSOMA('${selKey}');event.stopPropagation()">Todos</button>
+        <button onclick="clearMSSSOMA('${selKey}');event.stopPropagation()">Limpiar</button>
+      </div>
+    </div>`;
+  renderMSOptionsSSOMA(selKey, options, '');
+  updateMSLabelSSOMA(selKey, placeholder);
+}
+
+function renderMSOptionsSSOMA(selKey, options, search){
+  const container=document.getElementById('mso-'+selKey);
+  if(!container)return;
+  const sel=SEL_SSOMA[selKey];
+  const filtered=options.filter(o=>o.l.toLowerCase().includes(search.toLowerCase()));
+  container.innerHTML=filtered.map(o=>`
+    <label class="ms-option ${sel.has(o.v)?'sel':''}" onclick="event.stopPropagation()">
+      <input type="checkbox" ${sel.has(o.v)?'checked':''} onchange="toggleMSOptSSOMA('${selKey}','${o.v.replace(/'/g,"\\'")}',this.checked)">
+      <span>${o.l}</span>
+    </label>`).join('');
+}
+
+function filterMSSSOMA(selKey, search){
+  renderMSOptionsSSOMA(selKey, msOptsSSOMA[selKey]||[], search);
+}
+
+function toggleMSOptSSOMA(selKey, val, checked){
+  if(checked)SEL_SSOMA[selKey].add(val);else SEL_SSOMA[selKey].delete(val);
+  updateMSLabelSSOMA(selKey);
+  renderMSOptionsSSOMA(selKey, msOptsSSOMA[selKey]||[], '');
+  aplicarFiltrosSSOMA();
+}
+
+function selectAllMSSSOMA(selKey){
+  (msOptsSSOMA[selKey]||[]).forEach(o=>SEL_SSOMA[selKey].add(o.v));
+  updateMSLabelSSOMA(selKey);
+  renderMSOptionsSSOMA(selKey, msOptsSSOMA[selKey]||[], '');
+  aplicarFiltrosSSOMA();
+}
+
+function clearMSSSOMA(selKey){
+  SEL_SSOMA[selKey].clear();
+  updateMSLabelSSOMA(selKey);
+  renderMSOptionsSSOMA(selKey, msOptsSSOMA[selKey]||[], '');
+  aplicarFiltrosSSOMA();
+}
+
+function updateMSLabelSSOMA(selKey, placeholder){
+  const el=document.getElementById('msl-'+selKey);
+  if(!el)return;
+  const s=SEL_SSOMA[selKey];
+  const ph=placeholder||MS_PLACEHOLDERS_SSOMA[selKey]||'Seleccionar...';
+  if(s.size===0){el.innerHTML=`<span style="color:var(--text3)">${ph}</span>`;}
+  else if(s.size===1){el.textContent=[...s][0];}
+  else{el.innerHTML=`${ph} <span class="ms-badge">${s.size}</span>`;}
+}
 
 function poblarFiltros(data){
   const sets={empresa:new Set(),un:new Set(),depto:new Set(),tipo:new Set(),origen:new Set(),estcorr:new Set(),estacc:new Set(),crit:new Set(),resp:new Set(),respcorr:new Set(),respacc:new Set(),codigo:new Set()};
@@ -2677,45 +2729,47 @@ async function cargarSSOMA(){
   }
 }
 
+const SSOMA_ESTADO_OPTS = [{v:'CERRADO',l:'Cerrado'},{v:'ABIERTO',l:'En proceso'},{v:'SINPROC',l:'Sin procesar'}];
+const SSOMA_INFORME_OPTS = [{v:'CON',l:'Con informe'},{v:'SIN',l:'Sin informe'}];
+
 function poblarFiltrosSSOMA(data){
-  const llenar = (id, valores) => {
-    const sel = document.getElementById(id);
-    const actual = sel.value;
-    const opts = [...new Set(valores.filter(Boolean))].sort();
-    sel.innerHTML = sel.options[0].outerHTML + opts.map(v => `<option value="${v.replace(/"/g,'&quot;')}">${v}</option>`).join('');
-    if(opts.includes(actual)) sel.value = actual;
-  };
-  llenar('ssf-generante', data.map(r => r.generante));
-  llenar('ssf-empresa', data.map(r => r.empresa));
-  llenar('ssf-unnegocio', data.map(r => r.unNegocio));
+  const sets={tipo:new Set(),generante:new Set(),empresa:new Set(),unnegocio:new Set()};
+  data.forEach(r=>{
+    if(r.tipo && r.tipo.trim()) sets.tipo.add(r.tipo.trim());
+    if(r.generante && r.generante.trim()) sets.generante.add(r.generante.trim());
+    if(r.empresa && r.empresa.trim()) sets.empresa.add(r.empresa.trim());
+    if(r.unNegocio && r.unNegocio.trim()) sets.unnegocio.add(r.unNegocio.trim());
+  });
+  const toOpts=set=>[...set].sort((a,b)=>String(a).localeCompare(String(b))).map(v=>({v,l:v}));
+  msOptsSSOMA.tipo = toOpts(sets.tipo);
+  msOptsSSOMA.generante = toOpts(sets.generante);
+  msOptsSSOMA.empresa = toOpts(sets.empresa);
+  msOptsSSOMA.unnegocio = toOpts(sets.unnegocio);
+  msOptsSSOMA.estado = SSOMA_ESTADO_OPTS;
+  msOptsSSOMA.informe = SSOMA_INFORME_OPTS;
+
+  Object.keys(msOptsSSOMA).forEach(key=>{
+    buildMSSSOMA('ms-ss-'+key, key, msOptsSSOMA[key], MS_PLACEHOLDERS_SSOMA[key]);
+  });
 }
 
 function aplicarFiltrosSSOMA(){
-  const tipo = document.getElementById('ssf-tipo').value;
-  const generante = document.getElementById('ssf-generante').value;
-  const empresa = document.getElementById('ssf-empresa').value;
-  const unNegocio = document.getElementById('ssf-unnegocio').value;
-  const estado = document.getElementById('ssf-estado').value;
-  const informe = document.getElementById('ssf-informe').value;
   const desde = document.getElementById('ssf-desde').value ? new Date(document.getElementById('ssf-desde').value) : null;
   const hasta = document.getElementById('ssf-hasta').value ? new Date(document.getElementById('ssf-hasta').value) : null;
 
   filtradosSSOMA = rawSSOMA.filter(r => {
-    if(tipo){
-      const t = (r.tipo||'').toLowerCase();
-      if(tipo==='accidente' && !t.includes('accidente')) return false;
-      if(tipo==='incidente' && !t.includes('incidente')) return false;
-      if(tipo==='casi' && !t.includes('casi')) return false;
+    if(SEL_SSOMA.tipo.size && !SEL_SSOMA.tipo.has((r.tipo||'').trim())) return false;
+    if(SEL_SSOMA.generante.size && !SEL_SSOMA.generante.has((r.generante||'').trim())) return false;
+    if(SEL_SSOMA.empresa.size && !SEL_SSOMA.empresa.has((r.empresa||'').trim())) return false;
+    if(SEL_SSOMA.unnegocio.size && !SEL_SSOMA.unnegocio.has((r.unNegocio||'').trim())) return false;
+    if(SEL_SSOMA.estado.size){
+      const estKey = (r.estadoFinal==='CERRADO'||r.estadoFinal==='ABIERTO') ? r.estadoFinal : 'SINPROC';
+      if(!SEL_SSOMA.estado.has(estKey)) return false;
     }
-    if(generante && r.generante !== generante) return false;
-    if(empresa && r.empresa !== empresa) return false;
-    if(unNegocio && r.unNegocio !== unNegocio) return false;
-    if(estado){
-      if(estado==='SINPROC'){ if(r.estadoFinal==='CERRADO'||r.estadoFinal==='ABIERTO') return false; }
-      else if(r.estadoFinal !== estado) return false;
+    if(SEL_SSOMA.informe.size){
+      const tieneInf = r.informeFinal && !r.informeFinal.toUpperCase().includes('SIN INFORME');
+      if(!SEL_SSOMA.informe.has(tieneInf ? 'CON' : 'SIN')) return false;
     }
-    if(informe==='CON' && (!r.informeFinal || r.informeFinal.toUpperCase().includes('SIN INFORME'))) return false;
-    if(informe==='SIN' && r.informeFinal && !r.informeFinal.toUpperCase().includes('SIN INFORME')) return false;
     const d = parseDate(r.fecha);
     if(desde && d && d < desde) return false;
     if(hasta && d && d > hasta) return false;
@@ -2729,7 +2783,11 @@ function aplicarFiltrosSSOMA(){
 }
 
 function limpiarFiltrosSSOMA(){
-  ['ssf-tipo','ssf-generante','ssf-empresa','ssf-unnegocio','ssf-estado','ssf-informe'].forEach(id => document.getElementById(id).value = '');
+  Object.keys(SEL_SSOMA).forEach(k=>SEL_SSOMA[k].clear());
+  Object.keys(msOptsSSOMA).forEach(key=>{
+    updateMSLabelSSOMA(key);
+    renderMSOptionsSSOMA(key, msOptsSSOMA[key]||[], '');
+  });
   document.getElementById('ssf-desde').value = '';
   document.getElementById('ssf-hasta').value = '';
   aplicarFiltrosSSOMA();
