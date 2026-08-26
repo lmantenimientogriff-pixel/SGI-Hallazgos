@@ -2580,7 +2580,7 @@ function mapRowAccionSSOMA(r){
     obsCierre:     r['Observaciones -cierre'] || '',
     estVerif:      (r['Estado de la verificacion'] || '').toString().trim(),
     obsVerif:      r['verificación eficacia / Observaciones'] || '',
-    codigoAccion:  String(r['N FORMULARIO X'] || r['_codigoAccionByCol'] || '').trim(),
+    codigoAccion:  String(r['HALLAZGO INDEPENDIENTE'] || r['_codigoAccionByCol'] || '').trim(),
   };
 }
 
