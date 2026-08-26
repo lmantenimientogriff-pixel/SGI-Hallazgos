@@ -2597,7 +2597,13 @@ async function cargarSSOMA(){
     if(!Array.isArray(jsonPre)) throw new Error(jsonPre.error || 'Error al leer BD-INFORME PRELIMINAR');
     if(!Array.isArray(jsonAcc)) throw new Error(jsonAcc.error || 'Error al leer REGISTRO DE ACCIONES');
 
-    rawSSOMA = jsonPre.map(mapRowSSOMA).filter(r => r.serial);
+    // Filtrar solo desde 01/01/2025 (mismo criterio que Hallazgos)
+    const fechaCorteSSOMA = new Date(2025, 0, 1);
+    rawSSOMA = jsonPre.map(mapRowSSOMA).filter(r => {
+      if(!r.serial) return false;
+      const d = parseDate(r.fecha);
+      return d && d >= fechaCorteSSOMA;
+    });
     rawAccionesSSOMA = jsonAcc.map(mapRowAccionSSOMA).filter(r => r.codigoAccion);
 
     accionesPorPreliminar = {};
