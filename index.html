@@ -2810,6 +2810,13 @@ function distinctAcciones(campo){
   return [...vals].sort((a,b)=>a.localeCompare(b));
 }
 
+function nombresSistema(){
+  const lista = USUARIOS_SHEET.length ? USUARIOS_SHEET : USUARIOS;
+  const nombres = new Set();
+  lista.forEach(u => { if(u.nombre) nombres.add(u.nombre.trim()); });
+  return [...nombres].sort((a,b)=>a.localeCompare(b));
+}
+
 function distinctSSOMA(campo){
   const vals = new Set();
   rawSSOMA.forEach(r => { const v = String(r[campo]||'').trim(); if(v) vals.add(v); });
@@ -3632,7 +3639,12 @@ function renderFormNuevaAccion(){
       </div>
       <div class="usr-field"><label>Descripción de la acción correctiva</label><textarea id="nf-desc-${id}" placeholder="¿Qué se va a hacer para eliminar la causa raíz?"></textarea></div>
       <div class="accion-nueva-grid">
-        <div class="usr-field"><label>Responsable implementación</label><input type="text" id="nf-respimpl-${id}"></div>
+        <div class="usr-field"><label>Responsable implementación</label>
+          <select id="nf-respimpl-${id}">
+            <option value="">—</option>
+            ${nombresSistema().map(n=>`<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('')}
+          </select>
+        </div>
         <div class="usr-field"><label>Fecha implementación</label><input type="date" id="nf-fimpl-${id}"></div>
       </div>
     </div>
@@ -3653,7 +3665,12 @@ function renderFormNuevaAccion(){
           </select>
         </div>
       </div>
-      <div class="usr-field"><label>Responsable del sector</label><input type="text" id="nf-respsector"></div>
+      <div class="usr-field"><label>Responsable del sector</label>
+        <select id="nf-respsector">
+          <option value="">—</option>
+          ${nombresSistema().map(n=>`<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('')}
+        </select>
+      </div>
 
       <div class="vinculo-side-title" style="margin-top:14px">Acciones correctivas — podés cargar más de una</div>
       ${filasHtml}
