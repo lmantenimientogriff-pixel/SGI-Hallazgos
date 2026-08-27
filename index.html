@@ -638,7 +638,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div class="twrap">
         <table>
           <thead><tr>
-            <th>Código único</th><th>Fecha</th><th>Empresa</th><th>Tipo</th>
+            <th>N° Hallazgo</th><th>Fecha</th><th>Empresa</th><th>Tipo</th>
             <th>Descripción</th><th>Resp. Directo</th><th>Acciones</th>
           </tr></thead>
           <tbody id="hacc-tbody"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
@@ -4156,9 +4156,9 @@ function renderTablaHallazgosAcciones(){
   tbody.innerHTML = datos.map(r => {
     const serial = String(r.serialNumber||'').trim();
     const nAcc = (accionesPorHallazgo[serial] || []).length;
-    const btn = `<button class="vinculo-link-btn" onclick="abrirVinculoHallazgo('${serial.replace(/'/g,"\\'")}','${String(r.codigoUnico||'').replace(/'/g,"\\'")}')">${nAcc ? nAcc+' acc. →' : '+ Agregar'}</button>`;
+    const btn = `<button class="vinculo-link-btn" onclick="abrirVinculoHallazgo('${serial.replace(/'/g,"\\'")}')">${nAcc ? nAcc+' acc. →' : '+ Agregar'}</button>`;
     return `<tr>
-      <td><strong>${r.codigoUnico||r.nHall||'—'}</strong></td>
+      <td><strong>${serial||'—'}</strong></td>
       <td style="font-size:10.5px;white-space:nowrap">${fmtDate(r.fechaAud)}</td>
       <td style="font-size:11px">${r.empresa||'—'}</td>
       <td style="font-size:11px">${r.tipoHallazgo||'—'}</td>
@@ -4169,16 +4169,16 @@ function renderTablaHallazgosAcciones(){
   }).join('');
 }
 
-function abrirVinculoHallazgo(serial, codigoUnico){
+function abrirVinculoHallazgo(serial){
   const hallazgo = (filtrados.length?filtrados:rawData).find(r => String(r.serialNumber||'').trim() === serial);
   const acciones = accionesPorHallazgo[serial] || [];
   if(!hallazgo) return;
 
-  document.getElementById('vh-titulo').textContent = `Hallazgo ${codigoUnico || serial}`;
+  document.getElementById('vh-titulo').textContent = `Hallazgo ${serial}`;
 
   document.getElementById('vh-datos').innerHTML = `
     <div class="vinculo-side-title">Datos del hallazgo</div>
-    <div class="vinculo-row"><label>Código único</label><span>${hallazgo.codigoUnico||'—'}</span></div>
+    <div class="vinculo-row"><label>N° Hallazgo</label><span>${serial}</span></div>
     <div class="vinculo-row"><label>Fecha</label><span>${fmtDate(hallazgo.fechaAud)}</span></div>
     <div class="vinculo-row"><label>Empresa</label><span>${hallazgo.empresa||'—'}</span></div>
     <div class="vinculo-row"><label>Tipo</label><span>${hallazgo.tipoHallazgo||'—'}</span></div>
@@ -4288,8 +4288,7 @@ async function eliminarAccionHallazgoUI(numeroAccion, serialHallazgo){
     accionesPorHallazgo[serialHallazgo] = accionesPorHallazgo[serialHallazgo].filter(a => a.numeroAccion !== numeroAccion);
   }
   toast('✓ Acción eliminada');
-  const codigoUnicoActivo = document.getElementById('vh-titulo').textContent.replace('Hallazgo ', '');
-  abrirVinculoHallazgo(serialHallazgo, codigoUnicoActivo);
+  abrirVinculoHallazgo(serialHallazgo);
   renderTablaHallazgosAcciones();
 }
 
@@ -4449,8 +4448,7 @@ async function guardarAccionesNuevasHallazgo(){
 
   toast(`✓ ${filas.length} acción(es) cargada(s)`);
   hAccionFormAbierto = false;
-  const codigoUnicoActivo = document.getElementById('vh-titulo').textContent.replace('Hallazgo ', '');
-  abrirVinculoHallazgo(serial, codigoUnicoActivo);
+  abrirVinculoHallazgo(serial);
   renderTablaHallazgosAcciones();
 }
 </script>
