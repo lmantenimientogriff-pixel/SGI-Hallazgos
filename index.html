@@ -1871,6 +1871,7 @@ document.addEventListener('click', e => {
 
 // ─── NORMALIZACIÓN VERIFICACIÓN EFICACIA ────────────────────────────────
 function normVerif(v){
+  v = String(v==null?'':v);
   if(!v)return'SIN VERIFICAR';
   const t=v.trim().toUpperCase();
   if(t==='VERIFICA')return'VERIFICA';
@@ -1882,6 +1883,7 @@ function normVerif(v){
 
 // ─── NORMALIZACIÓN ESTADO ACCIÓN CORRECTIVA (Col. AC) ───────────────────
 function normEstAcc(v){
+  v = String(v==null?'':v);
   if(!v||v.trim()==='')return'PENDIENTE';
   const t=v.trim().toUpperCase();
   if(t==='FINALIZADO'||t==='CUMPLE'||t==='ANULADO')return'FINALIZADO';
@@ -1892,6 +1894,7 @@ function normEstAcc(v){
 
 // ─── NORMALIZACIÓN ESTADO CIERRE (Col. BL) ───────────────────────────────
 function normCierre(v){
+  v = String(v==null?'':v);
   if(!v||v.trim()===''||v.trim()==='#N/A'||v.trim()==='N/A')return'PENDIENTE';
   const t=v.trim().toUpperCase();
   if(t==='CERRADO')return'CERRADO';
@@ -1902,6 +1905,7 @@ function normCierre(v){
 
 // ─── NORMALIZACIÓN TIPO HALLAZGO ─────────────────────────────────────────
 function normTipo(v){
+  v = String(v==null?'':v);
   if(!v)return'';
   const t=v.trim().toLowerCase();
   if(t.includes('no conform'))return'No Conformidad';
@@ -1913,38 +1917,43 @@ function normTipo(v){
 }
 
 // ─── MAPEO JSON → OBJETO ──────────────────────────────────────────────────
+// S(): fuerza texto sin importar si la celda del Sheet tiene un número, una
+// fórmula, o está vacía — evita errores de "x.trim is not a function" en
+// cualquier columna donde alguien cargue un valor numérico en vez de texto.
+function S(v){ return String(v==null?'':v); }
+
 function mapRow(r){
   return{
-    serialNumber:r['Serial Number']||'',
-    fechaAud:r['Fecha relev./ Aud.']||r['Fecha relev./ Aud']||'',
-    empresa:r['Empresa']||'',
-    unNegocio:r['Unidad de negocio - unidadDeNegocio']||'',
-    sector:r['Sector']||'',
-    depto:r['Departamento']||'',
-    tipoHallazgo:normTipo(r['Tipo hallazgo']||''),
-    origen:r['Origen']||'',
-    subOrigen:r['Sub Origen']||'',
-    impacto:r['Impacto']||'',
-    respProceso:r['Responsable Proceso - APELLIDOYNOMBRE']||'',
-    respDir:r['Responsable Directo - APELLIDOYNOMBRE']||'',
-    nHall:r['Código único']||r['N° HALLAZGO']||'',
-    codigoUnico:r['Código único']||'',
-    desc:r['Descripción del hallazgo']||'',
-    correccion:r['Corrección  (la corrección elimina el desvío)']||r['Corrección']||'',
-    respCorr:r['Resp. Implementación - APELLIDO']||'',
-    fMaxCorr:r['Fecha máx. implementación corrección']||'',
-    fImplCorr:r['Fecha implementación corrección']||r['Fecha Implementación Corrección']||r['Fecha max. implementación corrección']||'',
-    estCorr:r['ESTADO CORRECCIÓN (LO ACTUALIZA EL RESPONSABLE)']||'',
-    causaRaiz:r['Descripción de la Causa Raiz']||'',
-    crit:r['Criticidad']||'',
-    accionDesc:r['Acción - Descripción de la acción correctiva (La acción correctiva no debe ser igual a la corrección pues la acción correctiva elimina la causa)']||'',
-    respAcc:r['Resp. Implementación - APELLIDOYNOMBRE']||'',
-    fImpl:r['Fecha implementación']||'',
-    estAcc:normEstAcc(r['ESTADO (LO ACTUALIZA EL RESPONSABLE)']||''),
-    fCierre:r['Fecha de Cierre']||'',
-    obsCierre:r['Observaciones -cierre']||'',
-    estVerif:normVerif((r['Estado de la verificacion']||'').trim()),
-    obsVerif:r['verificación eficacia / Observaciones']||'',
+    serialNumber:S(r['Serial Number']),
+    fechaAud:S(r['Fecha relev./ Aud.']||r['Fecha relev./ Aud']),
+    empresa:S(r['Empresa']),
+    unNegocio:S(r['Unidad de negocio - unidadDeNegocio']),
+    sector:S(r['Sector']),
+    depto:S(r['Departamento']),
+    tipoHallazgo:normTipo(r['Tipo hallazgo']),
+    origen:S(r['Origen']),
+    subOrigen:S(r['Sub Origen']),
+    impacto:S(r['Impacto']),
+    respProceso:S(r['Responsable Proceso - APELLIDOYNOMBRE']),
+    respDir:S(r['Responsable Directo - APELLIDOYNOMBRE']),
+    nHall:S(r['Código único']||r['N° HALLAZGO']),
+    codigoUnico:S(r['Código único']),
+    desc:S(r['Descripción del hallazgo']),
+    correccion:S(r['Corrección  (la corrección elimina el desvío)']||r['Corrección']),
+    respCorr:S(r['Resp. Implementación - APELLIDO']),
+    fMaxCorr:S(r['Fecha máx. implementación corrección']),
+    fImplCorr:S(r['Fecha implementación corrección']||r['Fecha Implementación Corrección']||r['Fecha max. implementación corrección']),
+    estCorr:S(r['ESTADO CORRECCIÓN (LO ACTUALIZA EL RESPONSABLE)']),
+    causaRaiz:S(r['Descripción de la Causa Raiz']),
+    crit:S(r['Criticidad']),
+    accionDesc:S(r['Acción - Descripción de la acción correctiva (La acción correctiva no debe ser igual a la corrección pues la acción correctiva elimina la causa)']),
+    respAcc:S(r['Resp. Implementación - APELLIDOYNOMBRE']),
+    fImpl:S(r['Fecha implementación']),
+    estAcc:normEstAcc(r['ESTADO (LO ACTUALIZA EL RESPONSABLE)']),
+    fCierre:S(r['Fecha de Cierre']),
+    obsCierre:S(r['Observaciones -cierre']),
+    estVerif:normVerif(r['Estado de la verificacion']),
+    obsVerif:S(r['verificación eficacia / Observaciones']),
     estCierre:normCierre(r['CIERRE PROCESO']||''),
   };
 }
