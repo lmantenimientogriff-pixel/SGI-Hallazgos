@@ -3887,14 +3887,24 @@ async function subirArchivosInputSSOMA(inputId, tipo, referencia){
   const input = document.getElementById(inputId);
   if(!input || !input.files || !input.files.length){ toast('⚠ Elegí al menos un archivo'); return; }
   const archivos = Array.from(input.files);
+  const cantidadAntes = (adjuntosPorReferencia[String(referencia)] || []).length;
   toast(`Subiendo ${archivos.length} archivo(s)...`);
   for(const file of archivos){
     await subirUnArchivoSSOMA(tipo, referencia, file);
   }
   input.value = '';
   toast('✓ Archivo(s) enviado(s), actualizando lista...');
-  await new Promise(r => setTimeout(r, 1800)); // margen para que Apps Script termine de escribir
-  await refrescarAdjuntosSSOMA();
+
+  // Reintenta el refresco varias veces (crear una subcarpeta nueva en Drive,
+  // la primera vez que se usa, puede tardar más) hasta confirmar que la
+  // cantidad de archivos de esta referencia realmente aumentó.
+  const esperas = [1800, 2200, 2800];
+  for(const espera of esperas){
+    await new Promise(r => setTimeout(r, espera));
+    await refrescarAdjuntosSSOMA();
+    const cantidadAhora = (adjuntosPorReferencia[String(referencia)] || []).length;
+    if(cantidadAhora > cantidadAntes) break;
+  }
   if(nuevaAccionSerialActivo) abrirVinculo(nuevaAccionSerialActivo);
 }
 
