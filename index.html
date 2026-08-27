@@ -4124,7 +4124,7 @@ function mapRowAccionHallazgo(r){
   };
 }
 
-let mapaCodigosHallazgos = {};
+let listaCodigosHallazgos = []; // array por posición (índice = rowId), no depende de "Código único"
 
 async function cargarAccionesHallazgos(){
   if(haccCargado){ renderTablaHallazgosAcciones(); return; }
@@ -4135,10 +4135,10 @@ async function cargarAccionesHallazgos(){
       fetch(API_URL() + '?action=getMapaCodigosHallazgos')
     ]);
     const json = await resAcc.json();
-    const mapa = await resMapa.json().catch(()=>({}));
+    const lista = await resMapa.json().catch(()=>[]);
     if(!Array.isArray(json)) throw new Error(json.error || 'Error al leer REGISTRO DE ACCIONES - HALLAZGOS');
 
-    mapaCodigosHallazgos = (mapa && typeof mapa === 'object') ? mapa : {};
+    listaCodigosHallazgos = Array.isArray(lista) ? lista : [];
     rawAccionesHallazgos = json.map(mapRowAccionHallazgo).filter(a => a.numeroAccion && !a.eliminada);
 
     haccCargado = true;
@@ -4152,12 +4152,13 @@ async function cargarAccionesHallazgos(){
   }
 }
 
-// Código limpio de UN hallazgo puntual (ej: "0239-1" -> "239-1").
-// Si no está en el mapa (hallazgo nuevo, todavía no migrado nunca), arma
-// uno de respaldo con Serial Number + "-1".
+// Código limpio de UN hallazgo puntual, por POSICIÓN (rowId) — no depende
+// en absoluto de lo que haya en la columna "Código único" (puede estar
+// vacía, tener fórmula, o un número plano: da igual).
 function codigoLimpioDe(hallazgo){
-  const original = String(hallazgo.codigoUnico || '').trim();
-  return mapaCodigosHallazgos[original] || (String(hallazgo.serialNumber||'').trim() + '-1');
+  const porPosicion = listaCodigosHallazgos[hallazgo.rowId];
+  if(porPosicion) return porPosicion;
+  return String(hallazgo.serialNumber||'').trim() + '-1'; // respaldo si no hay Serial Number cargado
 }
 
 // Acciones de UN hallazgo puntual: la acción migrada original (código
