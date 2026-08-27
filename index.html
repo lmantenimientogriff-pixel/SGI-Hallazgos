@@ -2802,6 +2802,19 @@ document.addEventListener('DOMContentLoaded', () => { inicializar(); setTimeout(
 // ══════════════════════════════════════════════════════════════════════
 
 let rawSSOMA = [], rawAccionesSSOMA = [], filtradosSSOMA = [], accionesPorPreliminar = {}, ssomaCargado = false;
+let rawAdjuntosSSOMA = [], adjuntosPorReferencia = {};
+
+function mapRowAdjuntoSSOMA(r){
+  return {
+    fecha:         r['Fecha'] || '',
+    usuario:       r['Usuario'] || '',
+    tipo:          r['Tipo'] || '',
+    referencia:    String(r['Referencia'] || '').trim(),
+    nombreArchivo: r['Nombre archivo'] || '',
+    link:          r['Link Drive'] || '',
+    idDrive:       r['ID Drive'] || '',
+  };
+}
 let ssomaOptTipo = [], ssomaOptSeveridad = [], ssomaOptInforme = [], ssomaOptCriticidad = [];
 
 // Lista fija de "Factor" — reemplaza los valores sucios de la hoja histórica
@@ -3291,12 +3304,14 @@ async function cargarSSOMA(){
   if(ssomaCargado) return;
   const tbody = document.getElementById('ssoma-tbody');
   try{
-    const [resPre, resAcc] = await Promise.all([
+    const [resPre, resAcc, resAdj] = await Promise.all([
       fetch(API_URL() + '?action=getSSOMA'),
-      fetch(API_URL() + '?action=getAccionesSSOMA')
+      fetch(API_URL() + '?action=getAccionesSSOMA'),
+      fetch(API_URL() + '?action=getAdjuntosSSOMA')
     ]);
     const jsonPre = await resPre.json();
     const jsonAcc = await resAcc.json();
+    const jsonAdj = await resAdj.json().catch(()=>[]);
     if(!Array.isArray(jsonPre)) throw new Error(jsonPre.error || 'Error al leer BD-INFORME PRELIMINAR');
     if(!Array.isArray(jsonAcc)) throw new Error(jsonAcc.error || 'Error al leer REGISTRO DE ACCIONES');
 
@@ -3313,6 +3328,13 @@ async function cargarSSOMA(){
     rawAccionesSSOMA.forEach(a => {
       if(!a.numPreliminar) return;
       (accionesPorPreliminar[a.numPreliminar] ||= []).push(a);
+    });
+
+    rawAdjuntosSSOMA = Array.isArray(jsonAdj) ? jsonAdj.map(mapRowAdjuntoSSOMA) : [];
+    adjuntosPorReferencia = {};
+    rawAdjuntosSSOMA.forEach(a => {
+      if(!a.referencia) return;
+      (adjuntosPorReferencia[a.referencia] ||= []).push(a);
     });
 
     ssomaCargado = true;
@@ -3588,6 +3610,13 @@ async function abrirVinculo(serial){
     <div class="vinculo-row"><label>Informe final</label><span>${ssomaPillInforme(pre.informeFinal)}</span></div>
     <div class="vinculo-row" style="align-items:flex-start"><label>Descripción</label><span style="font-size:10px;line-height:1.4;font-weight:400">${pre.descripcion||'—'}</span></div>
     <div class="vinculo-row" style="align-items:flex-start"><label>Causa raíz</label><span style="font-size:10px;line-height:1.4;font-weight:400">${escHtml(causaRaizTexto)}</span></div>
+
+    <div class="vinculo-side-title" style="margin-top:14px">Informe Final / Evidencia de investigación</div>
+    <div style="margin-bottom:8px">${listaAdjuntosHtml(serial)}</div>
+    <input type="file" id="pre-informefinal-files" multiple style="width:100%;font-size:10px">
+    <button type="button" style="margin-top:6px;width:100%;justify-content:center" onclick="subirArchivosInputSSOMA('pre-informefinal-files','INFORME_FINAL','${serial}')">
+      <i class="ti ti-upload"></i> Subir archivo(s)
+    </button>
   `;
 
   document.getElementById('vinculo-acciones').innerHTML = `
@@ -3802,6 +3831,83 @@ async function guardarAccionesNuevas(){
   renderTablaSSOMA(filtradosSSOMA);
 }
 
+// ── ADJUNTOS SSOMA — subida de archivos (Informe Final / Evidencia de acciones) ──
+
+function archivoABase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]); // saca el prefijo "data:...;base64,"
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function subirUnArchivoSSOMA(tipo, referencia, file){
+  const MAX_MB = 20;
+  if(file.size > MAX_MB * 1024 * 1024){
+    toast(`⚠ "${file.name}" supera ${MAX_MB}MB, no se subió`, 3500);
+    return false;
+  }
+  try{
+    const base64Data = await archivoABase64(file);
+    fetch(API_URL(), {
+      method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({
+        action:'subirAdjuntoSSOMA', tipo, referencia,
+        nombreArchivo: file.name, mimeType: file.type || 'application/octet-stream',
+        base64Data, usuario: (SESSION && SESSION.nombre) || ''
+      })
+    });
+    return true;
+  }catch(e){
+    toast(`⚠ Error subiendo "${file.name}"`, 3000);
+    return false;
+  }
+}
+
+async function refrescarAdjuntosSSOMA(){
+  try{
+    const res = await fetch(API_URL() + '?action=getAdjuntosSSOMA');
+    const json = await res.json();
+    if(Array.isArray(json)){
+      rawAdjuntosSSOMA = json.map(mapRowAdjuntoSSOMA);
+      adjuntosPorReferencia = {};
+      rawAdjuntosSSOMA.forEach(a => {
+        if(!a.referencia) return;
+        (adjuntosPorReferencia[a.referencia] ||= []).push(a);
+      });
+    }
+  }catch(e){ console.warn('No se pudo refrescar la lista de adjuntos', e); }
+}
+
+// Sube todos los archivos de un <input type="file" multiple>, espera a que
+// Apps Script termine de escribirlos en el Sheet, refresca la lista y
+// vuelve a abrir el modal del evento para que se vean los links nuevos.
+async function subirArchivosInputSSOMA(inputId, tipo, referencia){
+  const input = document.getElementById(inputId);
+  if(!input || !input.files || !input.files.length){ toast('⚠ Elegí al menos un archivo'); return; }
+  const archivos = Array.from(input.files);
+  toast(`Subiendo ${archivos.length} archivo(s)...`);
+  for(const file of archivos){
+    await subirUnArchivoSSOMA(tipo, referencia, file);
+  }
+  input.value = '';
+  toast('✓ Archivo(s) enviado(s), actualizando lista...');
+  await new Promise(r => setTimeout(r, 1800)); // margen para que Apps Script termine de escribir
+  await refrescarAdjuntosSSOMA();
+  if(nuevaAccionSerialActivo) abrirVinculo(nuevaAccionSerialActivo);
+}
+
+function listaAdjuntosHtml(referencia){
+  const lista = adjuntosPorReferencia[String(referencia)] || [];
+  if(!lista.length) return `<div style="font-size:10px;color:var(--text3)">Sin archivos cargados</div>`;
+  return `<div style="display:flex;flex-direction:column;gap:3px">` + lista.map(a => `
+    <a href="${a.link}" target="_blank" rel="noopener" style="font-size:10px;color:var(--blue);text-decoration:none;display:flex;align-items:center;gap:4px">
+      <i class="ti ti-paperclip"></i> ${escHtml(a.nombreArchivo)}
+    </a>`).join('') + `</div>`;
+}
+
+
 function vinculoAccionCard(a){
   const puedeEditar = SESSION && (SESSION.rol === 'admin' || SESSION.rol === 'responsable');
   const estMap = {'FINALIZADO':'p-fin','EN CURSO':'p-cur','PENDIENTE':'p-pen'};
@@ -3837,6 +3943,16 @@ function vinculoAccionCard(a){
       <div class="campo-mini"><label>Fecha impl.</label>${fImplInput}</div>
       <div class="campo-mini"><label>Verif. eficacia</label>${estVerifSelect}</div>
       <div class="campo-mini"><label>Fecha cierre</label><span>${fmtDate(a.fCierre)}</span></div>
+    </div>
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Evidencia de cierre</div>
+      ${listaAdjuntosHtml(a.codigoAccion)}
+      <div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap">
+        <input type="file" id="acc-files-${a.codigoAccion.replace(/[^a-zA-Z0-9]/g,'_')}" multiple style="font-size:9px;max-width:140px">
+        <button type="button" style="font-size:9px;padding:4px 8px" onclick="subirArchivosInputSSOMA('acc-files-${a.codigoAccion.replace(/[^a-zA-Z0-9]/g,'_')}','EVIDENCIA_ACCION','${a.codigoAccion}')">
+          <i class="ti ti-upload"></i> Subir
+        </button>
+      </div>
     </div>
   </div>`;
 }
