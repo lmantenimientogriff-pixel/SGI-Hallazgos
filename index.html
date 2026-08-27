@@ -671,14 +671,15 @@ tbody tr:hover td{background:var(--surface2)}
         <table>
           <thead><tr>
             <th class="ssoma-w-num">N°</th><th class="ssoma-w-fecha">Fecha</th>
-            <th class="ssoma-w-edit">Tipo</th><th class="ssoma-w-edit">Severidad</th>
+            <th class="ssoma-w-edit">Tipo</th><th class="ssoma-w-edit">Severidad real</th>
+            <th class="ssoma-w-edit">Severidad potencial</th>
             <th class="ssoma-w-nombre">Generante</th><th class="ssoma-w-nombre">Involucrado</th>
             <th class="ssoma-w-desc">Descripción</th><th class="ssoma-w-un">Unidad negocio</th>
             <th class="ssoma-w-mini">Días perd.</th><th class="ssoma-w-mini">ART</th>
             <th class="ssoma-w-edit-lg">Estado</th><th class="ssoma-w-edit">Inf. Final</th>
             <th class="ssoma-w-acc">Acciones</th>
           </tr></thead>
-          <tbody id="ssoma-tbody"><tr><td colspan="13" class="empty">Cargando...</td></tr></tbody>
+          <tbody id="ssoma-tbody"><tr><td colspan="14" class="empty">Cargando...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -2815,7 +2816,7 @@ function mapRowAdjuntoSSOMA(r){
     idDrive:       r['ID Drive'] || '',
   };
 }
-let ssomaOptTipo = [], ssomaOptSeveridad = [], ssomaOptInforme = [], ssomaOptCriticidad = [];
+let ssomaOptTipo = [], ssomaOptSeveridad = [], ssomaOptSeveridadPot = [], ssomaOptInforme = [], ssomaOptCriticidad = [];
 
 // Lista fija de "Factor" — reemplaza los valores sucios de la hoja histórica
 // por las 6 opciones reales del formulario (confirmadas por Franco 27/08/2026).
@@ -3340,6 +3341,7 @@ async function cargarSSOMA(){
     ssomaCargado = true;
     ssomaOptTipo = distinctSSOMA('tipo');
     ssomaOptSeveridad = distinctSSOMA('severidad');
+    ssomaOptSeveridadPot = distinctSSOMA('severidadPot');
     ssomaOptInforme = distinctSSOMA('informeFinal');
     ssomaOptCriticidad = distinctAccionesUpper('criticidad');
     poblarFiltrosSSOMA(rawSSOMA);
@@ -3347,7 +3349,7 @@ async function cargarSSOMA(){
     habilitarDragScroll(document.getElementById('ssoma-tbl-wrap'));
     document.getElementById('ssoma-subtitle').textContent = `${rawSSOMA.length} eventos · ${rawAccionesSSOMA.length} acciones correctivas`;
   }catch(e){
-    tbody.innerHTML = `<tr><td colspan="13" class="empty">Error al cargar: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14" class="empty">Error al cargar: ${e.message}</td></tr>`;
     document.getElementById('ssoma-subtitle').textContent = 'Error al cargar datos SSOMA';
     console.error(e);
   }
@@ -3526,7 +3528,7 @@ function escHtml(s){
 
 function renderTablaSSOMA(data){
   const tbody = document.getElementById('ssoma-tbody');
-  if(!data.length){ tbody.innerHTML = '<tr><td colspan="13" class="empty">Sin registros</td></tr>'; return; }
+  if(!data.length){ tbody.innerHTML = '<tr><td colspan="14" class="empty">Sin registros</td></tr>'; return; }
   const puedeEditar = SESSION && (SESSION.rol === 'admin' || SESSION.rol === 'responsable');
 
   tbody.innerHTML = data.map(r => {
@@ -3543,6 +3545,10 @@ function renderTablaSSOMA(data){
     const tdSeveridad = puedeEditar
       ? `<select class="ssoma-select-sm" title="${escHtml(r.severidad)}" onchange="saveEventoSSOMA('${serialEsc}','severidad',this.value,this)">${optsSSOMA(ssomaOptSeveridad, r.severidad)}</select>`
       : `<span class="ssoma-trunc" title="${escHtml(r.severidad)}">${r.severidad||'—'}</span>`;
+
+    const tdSeveridadPot = puedeEditar
+      ? `<select class="ssoma-select-sm" title="${escHtml(r.severidadPot)}" onchange="saveEventoSSOMA('${serialEsc}','severidadPot',this.value,this)">${optsSSOMA(ssomaOptSeveridadPot, r.severidadPot)}</select>`
+      : `<span class="ssoma-trunc" title="${escHtml(r.severidadPot)}">${r.severidadPot||'—'}</span>`;
 
     const tdEstado = puedeEditar
       ? `<select class="ssoma-select-sm" onchange="saveEventoSSOMA('${serialEsc}','estadoFinal',this.value,this)">
@@ -3561,6 +3567,7 @@ function renderTablaSSOMA(data){
       <td style="font-size:10.5px;white-space:nowrap">${fmtDate(r.fecha)}</td>
       <td>${tdTipo}</td>
       <td>${tdSeveridad}</td>
+      <td>${tdSeveridadPot}</td>
       <td><span class="ssoma-trunc" title="${escHtml(r.generante)}">${r.generante||'—'}</span></td>
       <td><span class="ssoma-trunc" title="${escHtml(r.involucrado)}">${r.involucrado||'—'}</span></td>
       <td><span class="ssoma-trunc" title="${escHtml(r.descripcion)}">${r.descripcion||'—'}</span></td>
