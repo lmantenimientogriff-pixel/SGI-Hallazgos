@@ -4457,7 +4457,11 @@ async function guardarAccionesNuevasHallazgo(){
   const baseN = proximoNumeroAccionHallazgo(codigoLimpio);
 
   const filas = accionesInput.map((acc,i) => {
-    const numeroAccion = codigoLimpio + '-' + (baseN + i + 1);
+    const slot = baseN + i + 1;
+    // El slot 1 (primera acción de este hallazgo) usa el código limpio tal
+    // cual (ej: "265-1"), sin sufijo extra. Recién la 2ª acción en adelante
+    // suma "-2", "-3", ... para no chocar con la primera.
+    const numeroAccion = (slot === 1) ? codigoLimpio : (codigoLimpio + '-' + slot);
     return [numeroAccion, causaRaiz, criticidad, acc.factor, acc.factorCausal, acc.accionDesc,
             acc.respImpl, acc.fImpl, 'PENDIENTE', '', '', '', ''];
   });
