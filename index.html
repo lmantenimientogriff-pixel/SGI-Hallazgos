@@ -2802,7 +2802,18 @@ document.addEventListener('DOMContentLoaded', () => { inicializar(); setTimeout(
 // ══════════════════════════════════════════════════════════════════════
 
 let rawSSOMA = [], rawAccionesSSOMA = [], filtradosSSOMA = [], accionesPorPreliminar = {}, ssomaCargado = false;
-let ssomaOptTipo = [], ssomaOptSeveridad = [], ssomaOptInforme = [], ssomaOptCriticidad = [], ssomaOptFactor = [];
+let ssomaOptTipo = [], ssomaOptSeveridad = [], ssomaOptInforme = [], ssomaOptCriticidad = [];
+
+// Lista fija de "Factor" — reemplaza los valores sucios de la hoja histórica
+// por las 6 opciones reales del formulario (confirmadas por Franco 27/08/2026).
+const ssomaOptFactor = [
+  'Mano de obra (Aplica a aspectos asociados  al personal)',
+  'Métodos  (Aplica a aspectos asociados a  la forma en la que se hacen las cosas, independiente del personal involucrado)',
+  'Maquinarias (Aplica a aspectos asociados a Maquina/herramientas/infraestructura/Software/hardware)',
+  'Medición (Aplica a aspectos asociados a  inspección, las diferentes medidas con que se trabajan, el aseguramiento de la calidad, calibración, tamaño de muestra, error de medición, etc)',
+  'Materia prima (Aplica a aspectos asociados a los  materiales en la empresa)',
+  'Otros'
+];
 
 function distinctAcciones(campo){
   const vals = new Set();
@@ -2843,7 +2854,7 @@ function mapRowSSOMA(r){
     provincia:     r['Provincia'] || '',
     unNegocio:     r['Unidad de negocio - unidadDeNegocio'] || '',
     generante:     r['Genera - APELLIDOYNOMBRE'] || '',
-    tipo:          r['Tipo Incidente/Accidente'] || '',
+    tipo:          r['_tipoByCol'] || r['Tipo Incidente/Accidente'] || '',
     m3Derramados:  r['Cantidad m3 Derramados'] || '',
     lesiones:      r['Lesiones'] || '',
     severidad:     r['Severidad'] || '',
@@ -3301,7 +3312,6 @@ async function cargarSSOMA(){
     ssomaOptSeveridad = distinctSSOMA('severidad');
     ssomaOptInforme = distinctSSOMA('informeFinal');
     ssomaOptCriticidad = distinctAcciones('criticidad');
-    ssomaOptFactor = distinctAcciones('factor');
     poblarFiltrosSSOMA(rawSSOMA);
     aplicarFiltrosSSOMA();
     habilitarDragScroll(document.getElementById('ssoma-tbl-wrap'));
