@@ -638,7 +638,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div class="twrap">
         <table>
           <thead><tr>
-            <th>N° Hallazgo</th><th>Fecha</th><th>Empresa</th><th>Tipo</th>
+            <th>Código único</th><th>Fecha</th><th>Empresa</th><th>Tipo</th>
             <th>Descripción</th><th>Resp. Directo</th><th>Acciones</th>
           </tr></thead>
           <tbody id="hacc-tbody"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
@@ -4093,7 +4093,7 @@ function exportarSSOMAExcel(){
 // ══════════════════════════════════════════════════════════════════════
 
 let rawAccionesHallazgos = [], accionesPorHallazgo = {}, haccCargado = false;
-let hAccionSerialActivo = null, hAccionFormAbierto = false;
+let hAccionSerialActivo = null, hAccionCodigoActivo = null, hAccionFormAbierto = false;
 let hAccionIds = [], hAccionContador = 0;
 let hallazgosOptCriticidad = [];
 
@@ -4124,19 +4124,22 @@ function mapRowAccionHallazgo(r){
   };
 }
 
+let mapaCodigosHallazgos = {};
+
 async function cargarAccionesHallazgos(){
   if(haccCargado){ renderTablaHallazgosAcciones(); return; }
   const tbody = document.getElementById('hacc-tbody');
   try{
-    const res = await fetch(API_URL() + '?action=getAccionesHallazgos');
-    const json = await res.json();
+    const [resAcc, resMapa] = await Promise.all([
+      fetch(API_URL() + '?action=getAccionesHallazgos'),
+      fetch(API_URL() + '?action=getMapaCodigosHallazgos')
+    ]);
+    const json = await resAcc.json();
+    const mapa = await resMapa.json().catch(()=>({}));
     if(!Array.isArray(json)) throw new Error(json.error || 'Error al leer REGISTRO DE ACCIONES - HALLAZGOS');
 
+    mapaCodigosHallazgos = (mapa && typeof mapa === 'object') ? mapa : {};
     rawAccionesHallazgos = json.map(mapRowAccionHallazgo).filter(a => a.numeroAccion && !a.eliminada);
-    accionesPorHallazgo = {};
-    rawAccionesHallazgos.forEach(a => {
-      (accionesPorHallazgo[a.serialHallazgo] ||= []).push(a);
-    });
 
     haccCargado = true;
     hallazgosOptCriticidad = distinctAccionesHallazgos('criticidad');
@@ -4149,16 +4152,34 @@ async function cargarAccionesHallazgos(){
   }
 }
 
+// Código limpio de UN hallazgo puntual (ej: "0239-1" -> "239-1").
+// Si no está en el mapa (hallazgo nuevo, todavía no migrado nunca), arma
+// uno de respaldo con Serial Number + "-1".
+function codigoLimpioDe(hallazgo){
+  const original = String(hallazgo.codigoUnico || '').trim();
+  return mapaCodigosHallazgos[original] || (String(hallazgo.serialNumber||'').trim() + '-1');
+}
+
+// Acciones de UN hallazgo puntual: la acción migrada original (código
+// idéntico al código limpio del hallazgo) + cualquier acción nueva cargada
+// después (código limpio + "-2", "-3", ...).
+function accionesDeHallazgo(codigoLimpio){
+  return rawAccionesHallazgos.filter(a =>
+    a.numeroAccion === codigoLimpio || a.numeroAccion.startsWith(codigoLimpio + '-')
+  );
+}
+
 function renderTablaHallazgosAcciones(){
   const tbody = document.getElementById('hacc-tbody');
   const datos = (filtrados.length ? filtrados : rawData);
   if(!datos.length){ tbody.innerHTML = '<tr><td colspan="7" class="empty">Sin hallazgos cargados</td></tr>'; return; }
   tbody.innerHTML = datos.map(r => {
-    const serial = String(r.serialNumber||'').trim();
-    const nAcc = (accionesPorHallazgo[serial] || []).length;
-    const btn = `<button class="vinculo-link-btn" onclick="abrirVinculoHallazgo('${serial.replace(/'/g,"\\'")}')">${nAcc ? nAcc+' acc. →' : '+ Agregar'}</button>`;
+    const codigo = String(r.codigoUnico||'').trim();
+    const codigoLimpio = codigoLimpioDe(r);
+    const nAcc = accionesDeHallazgo(codigoLimpio).length;
+    const btn = `<button class="vinculo-link-btn" onclick="abrirVinculoHallazgo('${codigo.replace(/'/g,"\\'")}')">${nAcc ? nAcc+' acc. →' : '+ Agregar'}</button>`;
     return `<tr>
-      <td><strong>${serial||'—'}</strong></td>
+      <td><strong>${codigo||'—'}</strong></td>
       <td style="font-size:10.5px;white-space:nowrap">${fmtDate(r.fechaAud)}</td>
       <td style="font-size:11px">${r.empresa||'—'}</td>
       <td style="font-size:11px">${r.tipoHallazgo||'—'}</td>
@@ -4169,16 +4190,17 @@ function renderTablaHallazgosAcciones(){
   }).join('');
 }
 
-function abrirVinculoHallazgo(serial){
-  const hallazgo = (filtrados.length?filtrados:rawData).find(r => String(r.serialNumber||'').trim() === serial);
-  const acciones = accionesPorHallazgo[serial] || [];
+function abrirVinculoHallazgo(codigo){
+  const hallazgo = (filtrados.length?filtrados:rawData).find(r => String(r.codigoUnico||'').trim() === codigo);
   if(!hallazgo) return;
+  const codigoLimpio = codigoLimpioDe(hallazgo);
+  const acciones = accionesDeHallazgo(codigoLimpio);
 
-  document.getElementById('vh-titulo').textContent = `Hallazgo ${serial}`;
+  document.getElementById('vh-titulo').textContent = `Hallazgo ${codigo}`;
 
   document.getElementById('vh-datos').innerHTML = `
     <div class="vinculo-side-title">Datos del hallazgo</div>
-    <div class="vinculo-row"><label>N° Hallazgo</label><span>${serial}</span></div>
+    <div class="vinculo-row"><label>Código único</label><span>${codigo}</span></div>
     <div class="vinculo-row"><label>Fecha</label><span>${fmtDate(hallazgo.fechaAud)}</span></div>
     <div class="vinculo-row"><label>Empresa</label><span>${hallazgo.empresa||'—'}</span></div>
     <div class="vinculo-row"><label>Tipo</label><span>${hallazgo.tipoHallazgo||'—'}</span></div>
@@ -4196,7 +4218,8 @@ function abrirVinculoHallazgo(serial){
     ${acciones.length ? acciones.map(a => vinculoAccionHallazgoCard(a)).join('') : '<div class="empty">Sin acciones registradas</div>'}
   `;
 
-  hAccionSerialActivo = serial;
+  hAccionSerialActivo = codigoLimpio; // se usa como prefijo para nuevas acciones de ESTE hallazgo puntual
+  hAccionCodigoActivo = codigo;       // Código único real, para reabrir el modal después
   hAccionFormAbierto = false;
   mostrarBotonAgregarAccionHallazgo();
 
@@ -4244,7 +4267,7 @@ function vinculoAccionHallazgoCard(a){
   return `<div class="vinculo-accion-card">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div class="cod">${a.numeroAccion || '—'}</div>
-      ${puedeEditar ? `<button style="font-size:9px;padding:2px 7px;background:var(--red-bg);color:var(--red-text);border:none" onclick="eliminarAccionHallazgoUI('${a.numeroAccion}','${a.serialHallazgo}')"><i class="ti ti-trash"></i> Eliminar</button>` : ''}
+      ${puedeEditar ? `<button style="font-size:9px;padding:2px 7px;background:var(--red-bg);color:var(--red-text);border:none" onclick="eliminarAccionHallazgoUI('${a.numeroAccion}')"><i class="ti ti-trash"></i> Eliminar</button>` : ''}
     </div>
     <div class="desc">${a.accionDesc || '—'}</div>
     <div class="meta">Resp: ${a.respImpl||'—'} · Criticidad: ${a.criticidad||'—'} · Factor: ${a.factor||'—'}</div>
@@ -4273,7 +4296,7 @@ async function saveFieldAccionHallazgo(numeroAccion, campo, valor, el){
   }
 }
 
-async function eliminarAccionHallazgoUI(numeroAccion, serialHallazgo){
+async function eliminarAccionHallazgoUI(numeroAccion){
   const ok = confirm(`¿Eliminar la acción "${numeroAccion}"?\n\nQueda archivada en el Sheet (no se borra), pero desaparece del tablero.`);
   if(!ok) return;
   try{
@@ -4284,11 +4307,8 @@ async function eliminarAccionHallazgoUI(numeroAccion, serialHallazgo){
   }catch(err){ console.warn('Error eliminando acción:', err); }
 
   rawAccionesHallazgos = rawAccionesHallazgos.filter(a => a.numeroAccion !== numeroAccion);
-  if(accionesPorHallazgo[serialHallazgo]){
-    accionesPorHallazgo[serialHallazgo] = accionesPorHallazgo[serialHallazgo].filter(a => a.numeroAccion !== numeroAccion);
-  }
   toast('✓ Acción eliminada');
-  abrirVinculoHallazgo(serialHallazgo);
+  abrirVinculoHallazgo(hAccionCodigoActivo);
   renderTablaHallazgosAcciones();
 }
 
@@ -4392,19 +4412,23 @@ function renderShellFormNuevaAccionHallazgo(){
   `;
 }
 
-function proximoNumeroAccionHallazgo(serial){
-  const existentes = accionesPorHallazgo[serial] || [];
+function proximoNumeroAccionHallazgo(codigoLimpio){
+  const existentes = accionesDeHallazgo(codigoLimpio);
   let max = 0;
   existentes.forEach(a => {
-    const partes = a.numeroAccion.split('-');
-    const n = parseInt(partes[partes.length-1]);
-    if(!isNaN(n) && n > max) max = n;
+    if(a.numeroAccion === codigoLimpio){
+      if(max < 1) max = 1; // la acción migrada original ocupa el slot "1"
+    } else {
+      const resto = a.numeroAccion.slice(codigoLimpio.length + 1); // lo que sigue después de "{codigoLimpio}-"
+      const n = parseInt(resto);
+      if(!isNaN(n) && n > max) max = n;
+    }
   });
   return max;
 }
 
 async function guardarAccionesNuevasHallazgo(){
-  const serial = String(hAccionSerialActivo);
+  const codigoLimpio = String(hAccionSerialActivo);
   const causaRaiz = document.getElementById('hf-causaraiz').value.trim();
   const criticidad = document.getElementById('hf-criticidad').value;
 
@@ -4420,10 +4444,10 @@ async function guardarAccionesNuevasHallazgo(){
 
   if(!accionesInput.length){ toast('⚠ Cargá al menos una acción con descripción'); return; }
 
-  const baseN = proximoNumeroAccionHallazgo(serial);
+  const baseN = proximoNumeroAccionHallazgo(codigoLimpio);
 
   const filas = accionesInput.map((acc,i) => {
-    const numeroAccion = serial + '-' + (baseN + i + 1);
+    const numeroAccion = codigoLimpio + '-' + (baseN + i + 1);
     return [numeroAccion, causaRaiz, criticidad, acc.factor, acc.factorCausal, acc.accionDesc,
             acc.respImpl, acc.fImpl, 'PENDIENTE', '', '', '', ''];
   });
@@ -4437,18 +4461,17 @@ async function guardarAccionesNuevasHallazgo(){
 
   filas.forEach((f, i) => {
     const nuevaAccion = {
-      numeroAccion: f[0], serialHallazgo: serial, causaRaiz, criticidad,
+      numeroAccion: f[0], serialHallazgo: codigoLimpio, causaRaiz, criticidad,
       factor: accionesInput[i].factor, factorCausal: accionesInput[i].factorCausal,
       accionDesc: accionesInput[i].accionDesc, respImpl: accionesInput[i].respImpl, fImpl: accionesInput[i].fImpl,
       estAcc: 'PENDIENTE', fCierre:'', obsCierre:'', estVerif:'', obsVerif:'', eliminada:''
     };
     rawAccionesHallazgos.push(nuevaAccion);
-    (accionesPorHallazgo[serial] ||= []).push(nuevaAccion);
   });
 
   toast(`✓ ${filas.length} acción(es) cargada(s)`);
   hAccionFormAbierto = false;
-  abrirVinculoHallazgo(serial);
+  abrirVinculoHallazgo(hAccionCodigoActivo);
   renderTablaHallazgosAcciones();
 }
 </script>
