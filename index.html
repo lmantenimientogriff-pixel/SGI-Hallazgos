@@ -506,6 +506,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="tab" onclick="switchTab('detalle',this)"><i class="ti ti-table" style="font-size:12px"></i> Detalle</div>
     <div class="tab" onclick="switchTab('plan',this)"><i class="ti ti-file-description" style="font-size:12px"></i> Plan de Acción</div>
     <div class="tab" onclick="switchTab('verificaciones',this)"><i class="ti ti-eye-check" style="font-size:12px"></i> Verificaciones</div>
+    <div class="tab" style="color:var(--purple)" onclick="switchTab('haccionesprueba',this)"><i class="ti ti-flask" style="font-size:12px"></i> Causa Raíz (prueba)</div>
     <div class="tab" onclick="switchTab('ssoma',this)"><i class="ti ti-alert-triangle" style="font-size:12px"></i> Acc./Incidentes</div>
     <div class="tab" onclick="switchTab('ssomaanalisis',this)"><i class="ti ti-chart-histogram" style="font-size:12px"></i> Gráficos SSOMA</div>
     <div class="tab" id="tab-log-btn" onclick="switchTab('log',this)" style="display:none"><i class="ti ti-history" style="font-size:12px"></i> Log de cambios</div>
@@ -619,6 +620,47 @@ tbody tr:hover td{background:var(--surface2)}
     </div>
     <div id="verif-kpis" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div>
     <div id="verif-container"></div>
+  </div>
+
+  <!-- ═══════════ TAB CAUSA RAÍZ (PRUEBA) — HALLAZGOS ═══════════ -->
+  <div class="tcontent" id="tab-haccionesprueba">
+    <div style="background:var(--purple-bg);border:1px solid var(--purple);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--purple-text)">
+      <i class="ti ti-flask"></i> <strong>Pestaña de prueba</strong> — para probar el circuito de causa raíz + acciones de Hallazgos en la hoja separada, sin tocar Detalle/Responsables todavía.
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">Hallazgos — Causa raíz y acciones</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px" id="hacc-subtitle">Cargando...</div>
+      </div>
+    </div>
+    <div class="tbl-card">
+      <div class="tbl-hdr"><div class="ct">Hallazgos</div></div>
+      <div class="twrap">
+        <table>
+          <thead><tr>
+            <th>Código único</th><th>Fecha</th><th>Empresa</th><th>Tipo</th>
+            <th>Descripción</th><th>Resp. Directo</th><th>Acciones</th>
+          </tr></thead>
+          <tbody id="hacc-tbody"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ MODAL VÍNCULO HALLAZGO ↔ ACCIONES ═══════════ -->
+  <div class="vinculo-overlay" id="vinculo-hallazgo-overlay">
+    <div class="vinculo-card">
+      <div class="vinculo-hdr">
+        <i class="ti ti-link"></i>
+        <span id="vh-titulo">Hallazgo</span>
+        <button onclick="cerrarVinculoHallazgo()">✕ Cerrar</button>
+      </div>
+      <div class="vinculo-body">
+        <div class="vinculo-side" id="vh-datos"></div>
+        <div class="vinculo-side" id="vh-acciones"></div>
+      </div>
+      <div id="vh-form-nueva" style="padding:0 16px 16px"></div>
+    </div>
   </div>
 
   <!-- ═══════════ TAB SSOMA — ACC./INCIDENTES ═══════════ -->
@@ -953,6 +995,7 @@ function switchTab(id,el){
   if(id==='verificaciones') renderVerificaciones(filtrados);
   if(id==='ssoma') cargarSSOMA();
   if(id==='ssomaanalisis') cargarSSOMA().then(renderAnalisisSSOMA);
+  if(id==='haccionesprueba') cargarAccionesHallazgos();
 }
 
 async function cargarLogSheet(){
@@ -4043,6 +4086,372 @@ function exportarSSOMAExcel(){
   XLSX.utils.book_append_sheet(wb2, ws, 'Accidentes Incidentes');
   XLSX.writeFile(wb2, `SSOMA_${new Date().toLocaleDateString('es-AR').replace(/\//g,'-')}.xlsx`);
   toast('Excel exportado ✓');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  HALLAZGOS — Causa raíz y acciones (hoja separada) — PESTAÑA DE PRUEBA
+// ══════════════════════════════════════════════════════════════════════
+
+let rawAccionesHallazgos = [], accionesPorHallazgo = {}, haccCargado = false;
+let hAccionSerialActivo = null, hAccionFormAbierto = false;
+let hAccionIds = [], hAccionContador = 0;
+let hallazgosOptCriticidad = [];
+
+function distinctAccionesHallazgos(campo){
+  const vals = new Set();
+  rawAccionesHallazgos.forEach(a => { const v = String(a[campo]||'').trim().toUpperCase(); if(v) vals.add(v); });
+  return [...vals].sort((a,b)=>a.localeCompare(b));
+}
+
+function mapRowAccionHallazgo(r){
+  const numeroAccion = String(r['Número de acción'] || r['_numeroAccionByCol'] || '').trim();
+  return {
+    numeroAccion,
+    serialHallazgo: numeroAccion.replace(/-\d+$/, ''), // "239-1" -> "239"
+    causaRaiz:   r['Descripción Causa Raíz'] || '',
+    criticidad:  r['Criticidad'] || '',
+    factor:      r['Acción - Factor'] || '',
+    factorCausal:r['Acción - Factor Causal'] || '',
+    accionDesc:  r['Descripción de la acción correctiva'] || '',
+    respImpl:    r['Resp. Implementación'] || '',
+    fImpl:       r['Fecha implementación'] || '',
+    estAcc:      (r['Estado'] || '').toString().trim(),
+    fCierre:     r['Fecha de Cierre'] || '',
+    obsCierre:   r['Observaciones - cierre'] || '',
+    estVerif:    (r['Estado de la verificación'] || '').toString().trim(),
+    obsVerif:    r['Verificación eficacia / Observaciones'] || '',
+    eliminada:   String(r['_eliminadaByCol'] || '').trim(),
+  };
+}
+
+async function cargarAccionesHallazgos(){
+  if(haccCargado){ renderTablaHallazgosAcciones(); return; }
+  const tbody = document.getElementById('hacc-tbody');
+  try{
+    const res = await fetch(API_URL() + '?action=getAccionesHallazgos');
+    const json = await res.json();
+    if(!Array.isArray(json)) throw new Error(json.error || 'Error al leer REGISTRO DE ACCIONES - HALLAZGOS');
+
+    rawAccionesHallazgos = json.map(mapRowAccionHallazgo).filter(a => a.numeroAccion && !a.eliminada);
+    accionesPorHallazgo = {};
+    rawAccionesHallazgos.forEach(a => {
+      (accionesPorHallazgo[a.serialHallazgo] ||= []).push(a);
+    });
+
+    haccCargado = true;
+    hallazgosOptCriticidad = distinctAccionesHallazgos('criticidad');
+    document.getElementById('hacc-subtitle').textContent = `${(filtrados.length?filtrados:rawData).length} hallazgos · ${rawAccionesHallazgos.length} acciones cargadas`;
+    renderTablaHallazgosAcciones();
+  }catch(e){
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Error al cargar: ${e.message}</td></tr>`;
+    document.getElementById('hacc-subtitle').textContent = 'Error al cargar';
+    console.error(e);
+  }
+}
+
+function renderTablaHallazgosAcciones(){
+  const tbody = document.getElementById('hacc-tbody');
+  const datos = (filtrados.length ? filtrados : rawData);
+  if(!datos.length){ tbody.innerHTML = '<tr><td colspan="7" class="empty">Sin hallazgos cargados</td></tr>'; return; }
+  tbody.innerHTML = datos.map(r => {
+    const serial = String(r.serialNumber||'').trim();
+    const nAcc = (accionesPorHallazgo[serial] || []).length;
+    const btn = `<button class="vinculo-link-btn" onclick="abrirVinculoHallazgo('${serial.replace(/'/g,"\\'")}','${String(r.codigoUnico||'').replace(/'/g,"\\'")}')">${nAcc ? nAcc+' acc. →' : '+ Agregar'}</button>`;
+    return `<tr>
+      <td><strong>${r.codigoUnico||r.nHall||'—'}</strong></td>
+      <td style="font-size:10.5px;white-space:nowrap">${fmtDate(r.fechaAud)}</td>
+      <td style="font-size:11px">${r.empresa||'—'}</td>
+      <td style="font-size:11px">${r.tipoHallazgo||'—'}</td>
+      <td style="font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.desc)}">${r.desc||'—'}</td>
+      <td style="font-size:11px">${r.respDir||'—'}</td>
+      <td>${btn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirVinculoHallazgo(serial, codigoUnico){
+  const hallazgo = (filtrados.length?filtrados:rawData).find(r => String(r.serialNumber||'').trim() === serial);
+  const acciones = accionesPorHallazgo[serial] || [];
+  if(!hallazgo) return;
+
+  document.getElementById('vh-titulo').textContent = `Hallazgo ${codigoUnico || serial}`;
+
+  document.getElementById('vh-datos').innerHTML = `
+    <div class="vinculo-side-title">Datos del hallazgo</div>
+    <div class="vinculo-row"><label>Código único</label><span>${hallazgo.codigoUnico||'—'}</span></div>
+    <div class="vinculo-row"><label>Fecha</label><span>${fmtDate(hallazgo.fechaAud)}</span></div>
+    <div class="vinculo-row"><label>Empresa</label><span>${hallazgo.empresa||'—'}</span></div>
+    <div class="vinculo-row"><label>Tipo</label><span>${hallazgo.tipoHallazgo||'—'}</span></div>
+    <div class="vinculo-row"><label>Sector</label><span>${hallazgo.sector||'—'}</span></div>
+    <div class="vinculo-row"><label>Resp. Directo</label><span>${hallazgo.respDir||'—'}</span></div>
+    <div class="vinculo-row" style="align-items:flex-start"><label>Descripción</label><span style="font-size:10px;line-height:1.4;font-weight:400">${escHtml(hallazgo.desc)}</span></div>
+    <div class="vinculo-side-title" style="margin-top:14px">Corrección (inmediata — sin cambios, se edita desde Detalle)</div>
+    <div class="vinculo-row" style="align-items:flex-start"><label>Corrección</label><span style="font-size:10px;line-height:1.4;font-weight:400">${escHtml(hallazgo.correccion)||'—'}</span></div>
+    <div class="vinculo-row"><label>Resp. corrección</label><span>${hallazgo.respCorr||'—'}</span></div>
+    <div class="vinculo-row"><label>Estado corrección</label><span>${hallazgo.estCorr||'—'}</span></div>
+  `;
+
+  document.getElementById('vh-acciones').innerHTML = `
+    <div class="vinculo-side-title">Acciones correctivas vinculadas (${acciones.length})</div>
+    ${acciones.length ? acciones.map(a => vinculoAccionHallazgoCard(a)).join('') : '<div class="empty">Sin acciones registradas</div>'}
+  `;
+
+  hAccionSerialActivo = serial;
+  hAccionFormAbierto = false;
+  mostrarBotonAgregarAccionHallazgo();
+
+  document.getElementById('vinculo-hallazgo-overlay').classList.add('open');
+}
+
+function cerrarVinculoHallazgo(){
+  document.getElementById('vinculo-hallazgo-overlay').classList.remove('open');
+}
+
+function vinculoAccionHallazgoCard(a){
+  const puedeEditar = SESSION && (SESSION.rol === 'admin' || SESSION.rol === 'responsable');
+  const estMap = {'FINALIZADO':'p-fin','EN CURSO':'p-cur','PENDIENTE':'p-pen'};
+  const estCls = estMap[(a.estAcc||'').toUpperCase()] || 'p-obs';
+
+  const estSelect = puedeEditar
+    ? `<select class="edit-date" style="width:100%" onchange="saveFieldAccionHallazgo('${a.numeroAccion}','estAcc',this.value,this)">
+         <option value="">—</option>
+         <option value="PENDIENTE" ${a.estAcc==='PENDIENTE'?'selected':''}>Pendiente</option>
+         <option value="EN CURSO" ${a.estAcc==='EN CURSO'?'selected':''}>En curso</option>
+         <option value="FINALIZADO" ${a.estAcc==='FINALIZADO'?'selected':''}>Finalizado</option>
+       </select>`
+    : `<span class="pill ${estCls}">${a.estAcc||'—'}</span>`;
+
+  const fImplInput = puedeEditar
+    ? `<input type="date" class="edit-date" value="${a.fImpl?String(a.fImpl).split('T')[0]:''}" onchange="saveFieldAccionHallazgo('${a.numeroAccion}','fImpl',this.value,this)">`
+    : `<span>${fmtDate(a.fImpl)}</span>`;
+
+  const estVerifSelect = puedeEditar
+    ? `<select class="edit-date" style="width:100%" onchange="saveFieldAccionHallazgo('${a.numeroAccion}','estVerif',this.value,this)">
+         <option value="">Sin verificar</option>
+         <option value="Verifica" ${a.estVerif==='Verifica'?'selected':''}>Verifica</option>
+         <option value="No Verifica" ${a.estVerif==='No Verifica'?'selected':''}>No Verifica</option>
+       </select>`
+    : `<span>${a.estVerif||'Sin verificar'}</span>`;
+
+  const fCierreInput = puedeEditar
+    ? `<input type="date" class="edit-date" value="${a.fCierre?String(a.fCierre).split('T')[0]:''}" onchange="saveFieldAccionHallazgo('${a.numeroAccion}','fCierre',this.value,this)">`
+    : `<span>${fmtDate(a.fCierre)}</span>`;
+
+  const obsVerifInput = puedeEditar
+    ? `<textarea class="edit-obs" style="min-height:40px" placeholder="Observaciones de la verificación..." onchange="saveFieldAccionHallazgo('${a.numeroAccion}','obsVerif',this.value,this)">${escHtml(a.obsVerif)}</textarea>`
+    : `<span style="font-size:11px;color:var(--text2)">${a.obsVerif||'—'}</span>`;
+
+  return `<div class="vinculo-accion-card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="cod">${a.numeroAccion || '—'}</div>
+      ${puedeEditar ? `<button style="font-size:9px;padding:2px 7px;background:var(--red-bg);color:var(--red-text);border:none" onclick="eliminarAccionHallazgoUI('${a.numeroAccion}','${a.serialHallazgo}')"><i class="ti ti-trash"></i> Eliminar</button>` : ''}
+    </div>
+    <div class="desc">${a.accionDesc || '—'}</div>
+    <div class="meta">Resp: ${a.respImpl||'—'} · Criticidad: ${a.criticidad||'—'} · Factor: ${a.factor||'—'}</div>
+    <div class="campos">
+      <div class="campo-mini"><label>Estado</label>${estSelect}</div>
+      <div class="campo-mini"><label>Fecha impl.</label>${fImplInput}</div>
+      <div class="campo-mini"><label>Verif. eficacia</label>${estVerifSelect}</div>
+      <div class="campo-mini"><label>Fecha verificación</label>${fCierreInput}</div>
+    </div>
+    <div style="margin-top:8px">
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Observaciones</div>
+      ${obsVerifInput}
+    </div>
+  </div>`;
+}
+
+async function saveFieldAccionHallazgo(numeroAccion, campo, valor, el){
+  const accion = rawAccionesHallazgos.find(a => a.numeroAccion === numeroAccion);
+  if(accion) accion[campo] = valor;
+  try{
+    const p = new URLSearchParams({ action:'updateAccionHallazgo', numeroAccion, campo, valor });
+    await fetch(API_URL() + '?' + p.toString());
+    toast('✓ Guardado');
+  }catch(e){
+    toast('⚠ No se pudo guardar', 3000);
+  }
+}
+
+async function eliminarAccionHallazgoUI(numeroAccion, serialHallazgo){
+  const ok = confirm(`¿Eliminar la acción "${numeroAccion}"?\n\nQueda archivada en el Sheet (no se borra), pero desaparece del tablero.`);
+  if(!ok) return;
+  try{
+    fetch(API_URL(), {
+      method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ action:'eliminarAccionHallazgo', numeroAccion, usuario: (SESSION && SESSION.nombre) || '' })
+    });
+  }catch(err){ console.warn('Error eliminando acción:', err); }
+
+  rawAccionesHallazgos = rawAccionesHallazgos.filter(a => a.numeroAccion !== numeroAccion);
+  if(accionesPorHallazgo[serialHallazgo]){
+    accionesPorHallazgo[serialHallazgo] = accionesPorHallazgo[serialHallazgo].filter(a => a.numeroAccion !== numeroAccion);
+  }
+  toast('✓ Acción eliminada');
+  const codigoUnicoActivo = document.getElementById('vh-titulo').textContent.replace('Hallazgo ', '');
+  abrirVinculoHallazgo(serialHallazgo, codigoUnicoActivo);
+  renderTablaHallazgosAcciones();
+}
+
+// ── Formulario: nueva causa raíz + acciones (mismo patrón que SSOMA) ──
+function mostrarBotonAgregarAccionHallazgo(){
+  const cont = document.getElementById('vh-form-nueva');
+  if(!cont) return;
+  const puedeEditar = SESSION && (SESSION.rol === 'admin' || SESSION.rol === 'responsable');
+  cont.innerHTML = puedeEditar
+    ? `<button class="accion-nueva-toggle" onclick="abrirFormNuevaAccionHallazgo()"><i class="ti ti-plus"></i> Cargar causa raíz y acciones correctivas</button>`
+    : '';
+}
+
+function abrirFormNuevaAccionHallazgo(){
+  hAccionFormAbierto = true;
+  hAccionIds = [];
+  hAccionContador = 0;
+  renderShellFormNuevaAccionHallazgo();
+  agregarFilaAccionFormHallazgo();
+}
+
+function cancelarFormNuevaAccionHallazgo(){
+  hAccionFormAbierto = false;
+  mostrarBotonAgregarAccionHallazgo();
+}
+
+function filaAccionHallazgoHtml(id, idx){
+  return `
+    <div class="accion-nueva-fila" id="fila-haccion-${id}">
+      <button class="quitar-fila" style="display:${hAccionIds.length>1?'':'none'}" onclick="quitarFilaAccionFormHallazgo(${id})">✕ Quitar</button>
+      <div class="accion-nueva-fila-label">Acción</div>
+      <div class="accion-nueva-grid">
+        <div class="usr-field"><label>Factor</label>
+          <select id="hf-factor-${id}">
+            <option value="">—</option>
+            ${ssomaOptFactor.map(v=>`<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="usr-field"><label>Factor causal</label><input type="text" id="hf-factorcausal-${id}" placeholder="Opcional"></div>
+      </div>
+      <div class="usr-field"><label>Descripción de la acción correctiva</label><textarea id="hf-desc-${id}" placeholder="¿Qué se va a hacer para eliminar la causa raíz?"></textarea></div>
+      <div class="accion-nueva-grid">
+        <div class="usr-field"><label>Responsable implementación</label>
+          <select id="hf-respimpl-${id}">
+            <option value="">—</option>
+            ${nombresSistema().map(n=>`<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="usr-field"><label>Fecha implementación</label><input type="date" id="hf-fimpl-${id}"></div>
+      </div>
+    </div>`;
+}
+
+function agregarFilaAccionFormHallazgo(){
+  const id = hAccionContador++;
+  hAccionIds.push(id);
+  const cont = document.getElementById('haccion-filas-container');
+  if(cont) cont.insertAdjacentHTML('beforeend', filaAccionHallazgoHtml(id));
+  actualizarBotonesQuitarFilaHallazgo();
+}
+
+function quitarFilaAccionFormHallazgo(id){
+  if(hAccionIds.length <= 1) return;
+  hAccionIds = hAccionIds.filter(x => x !== id);
+  const el = document.getElementById('fila-haccion-'+id);
+  if(el) el.remove();
+  actualizarBotonesQuitarFilaHallazgo();
+}
+
+function actualizarBotonesQuitarFilaHallazgo(){
+  const mostrar = hAccionIds.length > 1;
+  hAccionIds.forEach(id => {
+    const btn = document.querySelector('#fila-haccion-'+id+' .quitar-fila');
+    if(btn) btn.style.display = mostrar ? '' : 'none';
+  });
+}
+
+function renderShellFormNuevaAccionHallazgo(){
+  const cont = document.getElementById('vh-form-nueva');
+  if(!cont) return;
+  cont.innerHTML = `
+    <div class="accion-nueva-form">
+      <div class="vinculo-side-title">Causa raíz — una sola, se repite en todas las acciones que cargues acá</div>
+      <div class="usr-field"><label>Descripción de la causa raíz</label><textarea id="hf-causaraiz" placeholder="¿Por qué ocurrió el hallazgo?"></textarea></div>
+      <div class="usr-field"><label>Criticidad</label>
+        <select id="hf-criticidad">
+          <option value="">—</option>
+          ${hallazgosOptCriticidad.map(v=>`<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="vinculo-side-title" style="margin-top:14px">Acciones correctivas — podés cargar más de una</div>
+      <div id="haccion-filas-container"></div>
+
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+        <button onclick="agregarFilaAccionFormHallazgo()"><i class="ti ti-plus"></i> Agregar otra acción</button>
+        <button class="primary" onclick="guardarAccionesNuevasHallazgo()"><i class="ti ti-device-floppy"></i> Guardar</button>
+        <button onclick="cancelarFormNuevaAccionHallazgo()">Cancelar</button>
+      </div>
+    </div>
+  `;
+}
+
+function proximoNumeroAccionHallazgo(serial){
+  const existentes = accionesPorHallazgo[serial] || [];
+  let max = 0;
+  existentes.forEach(a => {
+    const partes = a.numeroAccion.split('-');
+    const n = parseInt(partes[partes.length-1]);
+    if(!isNaN(n) && n > max) max = n;
+  });
+  return max;
+}
+
+async function guardarAccionesNuevasHallazgo(){
+  const serial = String(hAccionSerialActivo);
+  const causaRaiz = document.getElementById('hf-causaraiz').value.trim();
+  const criticidad = document.getElementById('hf-criticidad').value;
+
+  if(!causaRaiz){ toast('⚠ Falta la causa raíz'); return; }
+
+  const accionesInput = hAccionIds.map(id => ({
+    factor: document.getElementById('hf-factor-'+id).value,
+    factorCausal: document.getElementById('hf-factorcausal-'+id).value.trim(),
+    accionDesc: document.getElementById('hf-desc-'+id).value.trim(),
+    respImpl: document.getElementById('hf-respimpl-'+id).value,
+    fImpl: document.getElementById('hf-fimpl-'+id).value,
+  })).filter(a => a.accionDesc);
+
+  if(!accionesInput.length){ toast('⚠ Cargá al menos una acción con descripción'); return; }
+
+  const baseN = proximoNumeroAccionHallazgo(serial);
+
+  const filas = accionesInput.map((acc,i) => {
+    const numeroAccion = serial + '-' + (baseN + i + 1);
+    return [numeroAccion, causaRaiz, criticidad, acc.factor, acc.factorCausal, acc.accionDesc,
+            acc.respImpl, acc.fImpl, 'PENDIENTE', '', '', '', ''];
+  });
+
+  try{
+    fetch(API_URL(), {
+      method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ action:'crearAccionesHallazgos', filas })
+    });
+  }catch(err){ console.warn('Error creando acciones:', err); }
+
+  filas.forEach((f, i) => {
+    const nuevaAccion = {
+      numeroAccion: f[0], serialHallazgo: serial, causaRaiz, criticidad,
+      factor: accionesInput[i].factor, factorCausal: accionesInput[i].factorCausal,
+      accionDesc: accionesInput[i].accionDesc, respImpl: accionesInput[i].respImpl, fImpl: accionesInput[i].fImpl,
+      estAcc: 'PENDIENTE', fCierre:'', obsCierre:'', estVerif:'', obsVerif:'', eliminada:''
+    };
+    rawAccionesHallazgos.push(nuevaAccion);
+    (accionesPorHallazgo[serial] ||= []).push(nuevaAccion);
+  });
+
+  toast(`✓ ${filas.length} acción(es) cargada(s)`);
+  hAccionFormAbierto = false;
+  const codigoUnicoActivo = document.getElementById('vh-titulo').textContent.replace('Hallazgo ', '');
+  abrirVinculoHallazgo(serial, codigoUnicoActivo);
+  renderTablaHallazgosAcciones();
 }
 </script>
 </body>
