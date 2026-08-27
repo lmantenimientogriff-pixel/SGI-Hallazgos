@@ -2821,6 +2821,14 @@ function distinctAcciones(campo){
   return [...vals].sort((a,b)=>a.localeCompare(b));
 }
 
+// Igual que distinctAcciones pero normaliza a MAYÚSCULAS antes de deduplicar,
+// para que "Relevante"/"relevante"/"RELEVANTE" no aparezcan como 3 opciones distintas.
+function distinctAccionesUpper(campo){
+  const vals = new Set();
+  rawAccionesSSOMA.forEach(a => { const v = String(a[campo]||'').trim().toUpperCase(); if(v) vals.add(v); });
+  return [...vals].sort((a,b)=>a.localeCompare(b));
+}
+
 function nombresSistema(){
   const lista = USUARIOS_SHEET.length ? USUARIOS_SHEET : USUARIOS;
   const nombres = new Set();
@@ -3311,7 +3319,7 @@ async function cargarSSOMA(){
     ssomaOptTipo = distinctSSOMA('tipo');
     ssomaOptSeveridad = distinctSSOMA('severidad');
     ssomaOptInforme = distinctSSOMA('informeFinal');
-    ssomaOptCriticidad = distinctAcciones('criticidad');
+    ssomaOptCriticidad = distinctAccionesUpper('criticidad');
     poblarFiltrosSSOMA(rawSSOMA);
     aplicarFiltrosSSOMA();
     habilitarDragScroll(document.getElementById('ssoma-tbl-wrap'));
@@ -3558,12 +3566,15 @@ async function saveEventoSSOMA(serial, campo, valor, el){
   }
 }
 
-function abrirVinculo(serial){
+async function abrirVinculo(serial){
+  await cargarSSOMA(); // garantiza que rawAccionesSSOMA esté completo antes de calcular próximo N° o mostrar acciones
   const pre = rawSSOMA.find(r => String(r.serial) === String(serial));
   const acciones = accionesPorPreliminar[String(serial)] || [];
   if(!pre) return;
 
   document.getElementById('vinculo-titulo').textContent = `Informe Preliminar N° ${serial}`;
+
+  const causaRaizTexto = (acciones.find(a => a.causaRaiz && a.causaRaiz.trim()) || {}).causaRaiz || '—';
 
   document.getElementById('vinculo-preliminar').innerHTML = `
     <div class="vinculo-side-title">Datos del evento</div>
@@ -3576,6 +3587,7 @@ function abrirVinculo(serial){
     <div class="vinculo-row"><label>Estado investigación</label><span>${ssomaPillEstadoFinal(pre.estadoFinal)}</span></div>
     <div class="vinculo-row"><label>Informe final</label><span>${ssomaPillInforme(pre.informeFinal)}</span></div>
     <div class="vinculo-row" style="align-items:flex-start"><label>Descripción</label><span style="font-size:10px;line-height:1.4;font-weight:400">${pre.descripcion||'—'}</span></div>
+    <div class="vinculo-row" style="align-items:flex-start"><label>Causa raíz</label><span style="font-size:10px;line-height:1.4;font-weight:400">${escHtml(causaRaizTexto)}</span></div>
   `;
 
   document.getElementById('vinculo-acciones').innerHTML = `
@@ -3604,40 +3616,37 @@ function abrirFormNuevaAccion(){
   nuevaAccionFormAbierto = true;
   nuevaAccionIds = [];
   nuevaAccionContador = 0;
-  agregarFilaAccionForm();
+  renderShellFormNuevaAccion();  // arma el formulario UNA sola vez (campos de causa raíz + contenedor vacío de acciones)
+  agregarFilaAccionForm();       // agrega la primera fila de acción dentro del contenedor
 }
 
 function cancelarFormNuevaAccion(){
   nuevaAccionFormAbierto = false;
-  renderFormNuevaAccion();
+  mostrarBotonAgregarAccion();
 }
 
-function agregarFilaAccionForm(){
-  nuevaAccionIds.push(nuevaAccionContador++);
-  renderFormNuevaAccion();
-}
-
-function quitarFilaAccionForm(id){
-  if(nuevaAccionIds.length <= 1) return;
-  nuevaAccionIds = nuevaAccionIds.filter(x => x !== id);
-  renderFormNuevaAccion();
-}
-
-function renderFormNuevaAccion(){
+function mostrarBotonAgregarAccion(){
   const cont = document.getElementById('vinculo-form-nueva');
   if(!cont) return;
   const puedeEditar = SESSION && (SESSION.rol === 'admin' || SESSION.rol === 'responsable');
-  if(!puedeEditar){ cont.innerHTML = ''; return; }
+  cont.innerHTML = puedeEditar
+    ? `<button class="accion-nueva-toggle" onclick="abrirFormNuevaAccion()"><i class="ti ti-plus"></i> Cargar causa raíz y acciones correctivas</button>`
+    : '';
+}
 
-  if(!nuevaAccionFormAbierto){
-    cont.innerHTML = `<button class="accion-nueva-toggle" onclick="abrirFormNuevaAccion()"><i class="ti ti-plus"></i> Cargar causa raíz y acciones correctivas</button>`;
-    return;
-  }
+// Punto de entrada llamado desde abrirVinculo() al (re)abrir el modal.
+// Siempre arranca colapsado — el formulario abierto solo persiste mientras
+// el modal sigue abierto para el mismo evento (ver agregarFilaAccionForm/quitarFilaAccionForm).
+function renderFormNuevaAccion(){
+  nuevaAccionFormAbierto = false;
+  mostrarBotonAgregarAccion();
+}
 
-  const filasHtml = nuevaAccionIds.map((id, idx) => `
-    <div class="accion-nueva-fila">
-      ${nuevaAccionIds.length>1 ? `<button class="quitar-fila" onclick="quitarFilaAccionForm(${id})">✕ Quitar</button>` : ''}
-      <div class="accion-nueva-fila-label">Acción ${idx+1}</div>
+function filaAccionHtml(id, idx){
+  return `
+    <div class="accion-nueva-fila" id="fila-accion-${id}">
+      <button class="quitar-fila" style="display:${nuevaAccionIds.length>1?'':'none'}" onclick="quitarFilaAccionForm(${id})">✕ Quitar</button>
+      <div class="accion-nueva-fila-label">Acción</div>
       <div class="accion-nueva-grid">
         <div class="usr-field"><label>Factor</label>
           <select id="nf-factor-${id}">
@@ -3657,9 +3666,39 @@ function renderFormNuevaAccion(){
         </div>
         <div class="usr-field"><label>Fecha implementación</label><input type="date" id="nf-fimpl-${id}"></div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+}
 
+function actualizarBotonesQuitarFila(){
+  const mostrar = nuevaAccionIds.length > 1;
+  nuevaAccionIds.forEach(id => {
+    const btn = document.querySelector('#fila-accion-'+id+' .quitar-fila');
+    if(btn) btn.style.display = mostrar ? '' : 'none';
+  });
+}
+
+function agregarFilaAccionForm(){
+  const id = nuevaAccionContador++;
+  nuevaAccionIds.push(id);
+  const cont = document.getElementById('accion-filas-container');
+  if(cont) cont.insertAdjacentHTML('beforeend', filaAccionHtml(id));
+  actualizarBotonesQuitarFila();
+}
+
+function quitarFilaAccionForm(id){
+  if(nuevaAccionIds.length <= 1) return; // siempre queda al menos 1 fila
+  nuevaAccionIds = nuevaAccionIds.filter(x => x !== id);
+  const el = document.getElementById('fila-accion-'+id);
+  if(el) el.remove();
+  actualizarBotonesQuitarFila();
+}
+
+// Arma SOLO UNA VEZ (al abrir el formulario) los campos de causa raíz + el
+// contenedor donde van a ir las filas de acciones. No se vuelve a tocar
+// mientras el formulario está abierto — por eso nada de lo ya escrito se pierde.
+function renderShellFormNuevaAccion(){
+  const cont = document.getElementById('vinculo-form-nueva');
+  if(!cont) return;
   cont.innerHTML = `
     <div class="accion-nueva-form">
       <div class="vinculo-side-title">Causa raíz — una sola, se repite en todas las acciones que cargues acá</div>
@@ -3683,7 +3722,7 @@ function renderFormNuevaAccion(){
       </div>
 
       <div class="vinculo-side-title" style="margin-top:14px">Acciones correctivas — podés cargar más de una</div>
-      ${filasHtml}
+      <div id="accion-filas-container"></div>
 
       <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
         <button onclick="agregarFilaAccionForm()"><i class="ti ti-plus"></i> Agregar otra acción</button>
