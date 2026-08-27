@@ -2922,6 +2922,7 @@ function mapRowAccionSSOMA(r){
     estVerif:      (r['Estado de la verificacion'] || '').toString().trim(),
     obsVerif:      r['verificación eficacia / Observaciones'] || '',
     codigoAccion:  String(r['HALLAZGO INDEPENDIENTE'] || r['_codigoAccionByCol'] || '').trim(),
+    eliminada:     String(r['_eliminadaByCol'] || '').trim(),
   };
 }
 
@@ -3328,7 +3329,7 @@ async function cargarSSOMA(){
       const d = parseDate(r.fecha);
       return d && d >= fechaCorteSSOMA;
     });
-    rawAccionesSSOMA = jsonAcc.map(mapRowAccionSSOMA).filter(r => r.codigoAccion);
+    rawAccionesSSOMA = jsonAcc.map(mapRowAccionSSOMA).filter(r => r.codigoAccion && !r.eliminada);
 
     accionesPorPreliminar = {};
     rawAccionesSSOMA.forEach(a => {
@@ -3956,7 +3957,10 @@ function vinculoAccionCard(a){
     : `<span>${a.estVerif||'Sin verificar'}</span>`;
 
   return `<div class="vinculo-accion-card">
-    <div class="cod">${a.codigoAccion || '—'}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="cod">${a.codigoAccion || '—'}</div>
+      ${puedeEditar ? `<button style="font-size:9px;padding:2px 7px;background:var(--red-bg);color:var(--red-text);border:none" onclick="eliminarAccionSSOMA('${a.codigoAccion}','${a.numPreliminar}')"><i class="ti ti-trash"></i> Eliminar</button>` : ''}
+    </div>
     <div class="desc">${a.accionDesc || '—'}</div>
     <div class="meta">Resp: ${a.respImpl||'—'} · Sector: ${a.respSector||'—'} · Criticidad: ${a.criticidad||'—'}</div>
     <div class="campos">
@@ -3990,6 +3994,27 @@ async function saveFieldSSOMA(codigoAccion, campo, valor, el){
   }catch(e){
     toast('⚠ No se pudo guardar', 3000);
   }
+}
+
+async function eliminarAccionSSOMA(codigoAccion, numPreliminar){
+  const ok = confirm(`¿Eliminar la acción "${codigoAccion}"?\n\nQueda archivada en el Sheet (no se borra), pero desaparece del tablero. La evidencia ya subida se conserva en Drive.`);
+  if(!ok) return;
+
+  try{
+    fetch(API_URL(), {
+      method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ action:'eliminarAccionSSOMA', codigoAccion, usuario: (SESSION && SESSION.nombre) || '' })
+    });
+  }catch(err){ console.warn('Error eliminando acción:', err); }
+
+  rawAccionesSSOMA = rawAccionesSSOMA.filter(a => a.codigoAccion !== codigoAccion);
+  if(accionesPorPreliminar[numPreliminar]){
+    accionesPorPreliminar[numPreliminar] = accionesPorPreliminar[numPreliminar].filter(a => a.codigoAccion !== codigoAccion);
+  }
+
+  toast('✓ Acción eliminada');
+  if(nuevaAccionSerialActivo) abrirVinculo(nuevaAccionSerialActivo);
+  renderTablaSSOMA(filtradosSSOMA);
 }
 
 function exportarSSOMAExcel(){
