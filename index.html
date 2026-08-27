@@ -342,6 +342,16 @@ tbody tr:hover td{background:var(--surface2)}
 .vinculo-link-btn{font-size:10px;color:var(--blue);text-decoration:none;font-weight:600;cursor:pointer;background:none;border:none;padding:0}
 .vinculo-link-btn:hover{text-decoration:underline}
 
+/* Formulario de carga de nueva causa raíz + acciones */
+.accion-nueva-toggle{width:100%;justify-content:center;margin-top:4px;font-size:11px;padding:8px;border:1px dashed var(--border2);background:var(--surface2)}
+.accion-nueva-form{border-top:2px solid var(--border);margin-top:14px;padding-top:14px}
+.accion-nueva-form textarea{width:100%;font-size:12px;padding:7px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);outline:none;resize:vertical;min-height:50px;font-family:inherit}
+.accion-nueva-form textarea:focus{border-color:var(--blue)}
+.accion-nueva-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.accion-nueva-fila{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:10px;position:relative}
+.accion-nueva-fila .quitar-fila{position:absolute;top:8px;right:8px;font-size:10px;padding:2px 7px;background:var(--red-bg);color:var(--red-text);border:none}
+.accion-nueva-fila-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+
 .ssoma-filtros .fgrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .ssoma-filtros input[type=date]{width:100%;font-size:11px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);outline:none;cursor:pointer}
 .ssoma-filtros input[type=date]:focus{border-color:var(--blue)}
@@ -686,6 +696,7 @@ tbody tr:hover td{background:var(--surface2)}
         <div class="vinculo-side" id="vinculo-preliminar"></div>
         <div class="vinculo-side" id="vinculo-acciones"></div>
       </div>
+      <div id="vinculo-form-nueva" style="padding:0 16px 16px"></div>
     </div>
   </div>
 
@@ -2791,7 +2802,13 @@ document.addEventListener('DOMContentLoaded', () => { inicializar(); setTimeout(
 // ══════════════════════════════════════════════════════════════════════
 
 let rawSSOMA = [], rawAccionesSSOMA = [], filtradosSSOMA = [], accionesPorPreliminar = {}, ssomaCargado = false;
-let ssomaOptTipo = [], ssomaOptSeveridad = [], ssomaOptInforme = [];
+let ssomaOptTipo = [], ssomaOptSeveridad = [], ssomaOptInforme = [], ssomaOptCriticidad = [], ssomaOptFactor = [];
+
+function distinctAcciones(campo){
+  const vals = new Set();
+  rawAccionesSSOMA.forEach(a => { const v = String(a[campo]||'').trim(); if(v) vals.add(v); });
+  return [...vals].sort((a,b)=>a.localeCompare(b));
+}
 
 function distinctSSOMA(campo){
   const vals = new Set();
@@ -3276,6 +3293,8 @@ async function cargarSSOMA(){
     ssomaOptTipo = distinctSSOMA('tipo');
     ssomaOptSeveridad = distinctSSOMA('severidad');
     ssomaOptInforme = distinctSSOMA('informeFinal');
+    ssomaOptCriticidad = distinctAcciones('criticidad');
+    ssomaOptFactor = distinctAcciones('factor');
     poblarFiltrosSSOMA(rawSSOMA);
     aplicarFiltrosSSOMA();
     habilitarDragScroll(document.getElementById('ssoma-tbl-wrap'));
@@ -3468,7 +3487,7 @@ function renderTablaSSOMA(data){
     const nAcciones = (accionesPorPreliminar[String(r.serial)] || []).length;
     const accionesBtn = nAcciones
       ? `<button class="vinculo-link-btn" onclick="abrirVinculo('${serialEsc}')">${nAcciones} acc. →</button>`
-      : '<span style="color:var(--text3);font-size:10px">—</span>';
+      : `<button class="vinculo-link-btn" onclick="abrirVinculo('${serialEsc}')">+ Agregar</button>`;
 
     const tdTipo = puedeEditar
       ? `<select class="ssoma-select-sm" title="${escHtml(r.tipo)}" onchange="saveEventoSSOMA('${serialEsc}','tipo',this.value,this)">${optsSSOMA(ssomaOptTipo, r.tipo)}</select>`
@@ -3547,11 +3566,174 @@ function abrirVinculo(serial){
     ${acciones.length ? acciones.map(a => vinculoAccionCard(a)).join('') : '<div class="empty">Sin acciones registradas</div>'}
   `;
 
+  nuevaAccionSerialActivo = String(serial);
+  nuevaAccionFormAbierto = false;
+  renderFormNuevaAccion();
+
   document.getElementById('vinculo-overlay').classList.add('open');
 }
 
 function cerrarVinculo(){
   document.getElementById('vinculo-overlay').classList.remove('open');
+}
+
+// ── FORMULARIO: nueva causa raíz + acciones correctivas (carga directa desde el tablero) ──
+let nuevaAccionIds = [];
+let nuevaAccionContador = 0;
+let nuevaAccionSerialActivo = null;
+let nuevaAccionFormAbierto = false;
+
+function abrirFormNuevaAccion(){
+  nuevaAccionFormAbierto = true;
+  nuevaAccionIds = [];
+  nuevaAccionContador = 0;
+  agregarFilaAccionForm();
+}
+
+function cancelarFormNuevaAccion(){
+  nuevaAccionFormAbierto = false;
+  renderFormNuevaAccion();
+}
+
+function agregarFilaAccionForm(){
+  nuevaAccionIds.push(nuevaAccionContador++);
+  renderFormNuevaAccion();
+}
+
+function quitarFilaAccionForm(id){
+  if(nuevaAccionIds.length <= 1) return;
+  nuevaAccionIds = nuevaAccionIds.filter(x => x !== id);
+  renderFormNuevaAccion();
+}
+
+function renderFormNuevaAccion(){
+  const cont = document.getElementById('vinculo-form-nueva');
+  if(!cont) return;
+  const puedeEditar = SESSION && (SESSION.rol === 'admin' || SESSION.rol === 'responsable');
+  if(!puedeEditar){ cont.innerHTML = ''; return; }
+
+  if(!nuevaAccionFormAbierto){
+    cont.innerHTML = `<button class="accion-nueva-toggle" onclick="abrirFormNuevaAccion()"><i class="ti ti-plus"></i> Cargar causa raíz y acciones correctivas</button>`;
+    return;
+  }
+
+  const filasHtml = nuevaAccionIds.map((id, idx) => `
+    <div class="accion-nueva-fila">
+      ${nuevaAccionIds.length>1 ? `<button class="quitar-fila" onclick="quitarFilaAccionForm(${id})">✕ Quitar</button>` : ''}
+      <div class="accion-nueva-fila-label">Acción ${idx+1}</div>
+      <div class="accion-nueva-grid">
+        <div class="usr-field"><label>Factor</label>
+          <select id="nf-factor-${id}">
+            <option value="">—</option>
+            ${ssomaOptFactor.map(v=>`<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="usr-field"><label>Factor causal</label><input type="text" id="nf-factorcausal-${id}" placeholder="Opcional"></div>
+      </div>
+      <div class="usr-field"><label>Descripción de la acción correctiva</label><textarea id="nf-desc-${id}" placeholder="¿Qué se va a hacer para eliminar la causa raíz?"></textarea></div>
+      <div class="accion-nueva-grid">
+        <div class="usr-field"><label>Responsable implementación</label><input type="text" id="nf-respimpl-${id}"></div>
+        <div class="usr-field"><label>Fecha implementación</label><input type="date" id="nf-fimpl-${id}"></div>
+      </div>
+    </div>
+  `).join('');
+
+  cont.innerHTML = `
+    <div class="accion-nueva-form">
+      <div class="vinculo-side-title">Causa raíz — una sola, se repite en todas las acciones que cargues acá</div>
+      <div class="usr-field"><label>Descripción de la causa raíz</label><textarea id="nf-causaraiz" placeholder="¿Por qué ocurrió el evento?"></textarea></div>
+      <div class="accion-nueva-grid">
+        <div class="usr-field"><label>¿Se realizó análisis de causa raíz?</label>
+          <select id="nf-analisis"><option value="">—</option><option value="SI">Sí</option><option value="NO">No</option></select>
+        </div>
+        <div class="usr-field"><label>Criticidad</label>
+          <select id="nf-criticidad">
+            <option value="">—</option>
+            ${ssomaOptCriticidad.map(v=>`<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="usr-field"><label>Responsable del sector</label><input type="text" id="nf-respsector"></div>
+
+      <div class="vinculo-side-title" style="margin-top:14px">Acciones correctivas — podés cargar más de una</div>
+      ${filasHtml}
+
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+        <button onclick="agregarFilaAccionForm()"><i class="ti ti-plus"></i> Agregar otra acción</button>
+        <button class="primary" onclick="guardarAccionesNuevas()"><i class="ti ti-device-floppy"></i> Guardar</button>
+        <button onclick="cancelarFormNuevaAccion()">Cancelar</button>
+      </div>
+    </div>
+  `;
+}
+
+function proximoSerialAcciones(){
+  let max = 0;
+  rawAccionesSSOMA.forEach(a => { const n = parseInt(a.serial); if(!isNaN(n) && n>max) max=n; });
+  return max+1;
+}
+function proximoSufijoAccion(numPreliminar){
+  let max = 0;
+  rawAccionesSSOMA.forEach(a=>{
+    if(String(a.numPreliminar).trim() !== String(numPreliminar).trim()) return;
+    const partes = String(a.codigoAccion).split('-');
+    if(partes.length===2){ const n=parseInt(partes[1]); if(!isNaN(n)&&n>max) max=n; }
+  });
+  return max;
+}
+
+async function guardarAccionesNuevas(){
+  const serial = String(nuevaAccionSerialActivo);
+  const causaRaiz = document.getElementById('nf-causaraiz').value.trim();
+  const analisis = document.getElementById('nf-analisis').value;
+  const criticidad = document.getElementById('nf-criticidad').value;
+  const respSector = document.getElementById('nf-respsector').value.trim();
+
+  if(!causaRaiz){ toast('⚠ Falta la causa raíz'); return; }
+
+  const accionesInput = nuevaAccionIds.map(id => ({
+    factor: document.getElementById('nf-factor-'+id).value,
+    factorCausal: document.getElementById('nf-factorcausal-'+id).value.trim(),
+    accionDesc: document.getElementById('nf-desc-'+id).value.trim(),
+    respImpl: document.getElementById('nf-respimpl-'+id).value.trim(),
+    fImpl: document.getElementById('nf-fimpl-'+id).value,
+  })).filter(a => a.accionDesc);
+
+  if(!accionesInput.length){ toast('⚠ Cargá al menos una acción con descripción'); return; }
+
+  const serialNuevo = proximoSerialAcciones();
+  const sufijoBase = proximoSufijoAccion(serial);
+  const hoy = new Date().toLocaleDateString('es-AR');
+  const usuario = (SESSION && SESSION.nombre) || '';
+
+  const filas = accionesInput.map((acc,i) => {
+    const codigo = serial + '-' + (sufijoBase + i + 1);
+    return [serialNuevo, usuario, hoy, hoy, 'Preliminar Incidente-Accidente', serial, respSector, analisis, causaRaiz, criticidad,
+            acc.factor, acc.factorCausal, acc.accionDesc, acc.respImpl, acc.fImpl, 'PENDIENTE', '', '', '', '', '', codigo];
+  });
+
+  try{
+    fetch(API_URL(), {
+      method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ action:'crearAccionesSSOMA', filas })
+    });
+  }catch(err){ console.warn('Error creando acciones:', err); }
+
+  filas.forEach((f, i) => {
+    const nuevaAccion = {
+      serial: String(serialNuevo), numPreliminar: serial, respSector, causaRaiz, criticidad,
+      factor: accionesInput[i].factor, factorCausal: accionesInput[i].factorCausal,
+      accionDesc: accionesInput[i].accionDesc, respImpl: accionesInput[i].respImpl, fImpl: accionesInput[i].fImpl,
+      estAcc: 'PENDIENTE', fCierre:'', obsCierre:'', estVerif:'', obsVerif:'', codigoAccion: f[21]
+    };
+    rawAccionesSSOMA.push(nuevaAccion);
+    (accionesPorPreliminar[serial] ||= []).push(nuevaAccion);
+  });
+
+  toast(`✓ ${filas.length} acción(es) cargada(s)`);
+  nuevaAccionFormAbierto = false;
+  abrirVinculo(serial);
+  renderTablaSSOMA(filtradosSSOMA);
 }
 
 function vinculoAccionCard(a){
