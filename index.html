@@ -2816,7 +2816,12 @@ function mapRowAdjuntoSSOMA(r){
     idDrive:       r['ID Drive'] || '',
   };
 }
-let ssomaOptTipo = [], ssomaOptSeveridad = [], ssomaOptSeveridadPot = [], ssomaOptInforme = [], ssomaOptCriticidad = [];
+let ssomaOptTipo = [], ssomaOptInforme = [], ssomaOptCriticidad = [];
+
+// Lista fija para Severidad real y Severidad potencial (confirmada por Franco 27/08/2026)
+const SSOMA_SEVERIDAD_OPTS = ['Menor', 'Mayor', 'Relevante', 'Grave'];
+const ssomaOptSeveridad = SSOMA_SEVERIDAD_OPTS;
+const ssomaOptSeveridadPot = SSOMA_SEVERIDAD_OPTS;
 
 // Lista fija de "Factor" — reemplaza los valores sucios de la hoja histórica
 // por las 6 opciones reales del formulario (confirmadas por Franco 27/08/2026).
@@ -3340,8 +3345,7 @@ async function cargarSSOMA(){
 
     ssomaCargado = true;
     ssomaOptTipo = distinctSSOMA('tipo');
-    ssomaOptSeveridad = distinctSSOMA('severidad');
-    ssomaOptSeveridadPot = distinctSSOMA('severidadPot');
+    // Severidad real y potencial usan la misma lista fija (ver constante SSOMA_SEVERIDAD_OPTS)
     ssomaOptInforme = distinctSSOMA('informeFinal');
     ssomaOptCriticidad = distinctAccionesUpper('criticidad');
     poblarFiltrosSSOMA(rawSSOMA);
