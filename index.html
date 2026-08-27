@@ -3948,13 +3948,21 @@ function vinculoAccionCard(a){
     ? `<input type="date" class="edit-date" value="${a.fImpl?String(a.fImpl).split('T')[0]:''}" onchange="saveFieldSSOMA('${a.codigoAccion}','fImpl',this.value,this)">`
     : `<span>${fmtDate(a.fImpl)}</span>`;
 
-  const estVerifSelect = (SESSION && SESSION.rol === 'admin')
+  const estVerifSelect = puedeEditar
     ? `<select class="edit-date" style="width:100%" onchange="saveFieldSSOMA('${a.codigoAccion}','estVerif',this.value,this)">
          <option value="">Sin verificar</option>
          <option value="Verifica" ${a.estVerif==='Verifica'?'selected':''}>Verifica</option>
          <option value="No Verifica" ${a.estVerif==='No Verifica'?'selected':''}>No Verifica</option>
        </select>`
     : `<span>${a.estVerif||'Sin verificar'}</span>`;
+
+  const fCierreInput = puedeEditar
+    ? `<input type="date" class="edit-date" value="${a.fCierre?String(a.fCierre).split('T')[0]:''}" onchange="saveFieldSSOMA('${a.codigoAccion}','fCierre',this.value,this)">`
+    : `<span>${fmtDate(a.fCierre)}</span>`;
+
+  const obsVerifInput = puedeEditar
+    ? `<textarea class="edit-obs" style="min-height:40px" placeholder="Observaciones de la verificación..." onchange="saveFieldSSOMA('${a.codigoAccion}','obsVerif',this.value,this)">${escHtml(a.obsVerif)}</textarea>`
+    : `<span style="font-size:11px;color:var(--text2)">${a.obsVerif||'—'}</span>`;
 
   return `<div class="vinculo-accion-card">
     <div style="display:flex;justify-content:space-between;align-items:center">
@@ -3967,7 +3975,11 @@ function vinculoAccionCard(a){
       <div class="campo-mini"><label>Estado</label>${estSelect}</div>
       <div class="campo-mini"><label>Fecha impl.</label>${fImplInput}</div>
       <div class="campo-mini"><label>Verif. eficacia</label>${estVerifSelect}</div>
-      <div class="campo-mini"><label>Fecha cierre</label><span>${fmtDate(a.fCierre)}</span></div>
+      <div class="campo-mini"><label>Fecha verificación</label>${fCierreInput}</div>
+    </div>
+    <div style="margin-top:8px">
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Observaciones</div>
+      ${obsVerifInput}
     </div>
     <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
       <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Evidencia de cierre</div>
