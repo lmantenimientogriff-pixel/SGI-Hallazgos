@@ -4296,10 +4296,13 @@ function badgesEstado(listaHallazgos){
   const conteo = {'SIN ACCIÓN':0, 'PENDIENTE':0, 'EN CURSO':0, 'FINALIZADO':0};
   listaHallazgos.forEach(h => { conteo[estadoResumenHallazgo(h)]++; });
 
-  // El % de cumplimiento NO contempla "Oportunidad de Mejora" — son mejoras
-  // sugeridas, no hallazgos de cumplimiento obligatorio. Los contadores de
-  // abajo (⚪🔴🟡🟢) sí siguen mostrando todos, OM incluidas.
-  const paraPct = listaHallazgos.filter(h => h.tipoHallazgo !== 'Oportunidad de Mejora');
+  // El % de cumplimiento NO contempla "Oportunidad de Mejora" cuando se
+  // mezcla con otros tipos (Sector/Departamento) — son mejoras sugeridas,
+  // no hallazgos de cumplimiento obligatorio. PERO si la rama es 100% OM
+  // (parado justo en el grupo "Oportunidad de Mejora"), excluir todo dejaría
+  // 0/0 — en ese caso el % se calcula igual, sobre esas mismas OM.
+  const sinOM = listaHallazgos.filter(h => h.tipoHallazgo !== 'Oportunidad de Mejora');
+  const paraPct = sinOM.length ? sinOM : listaHallazgos;
   const finalizadosPct = paraPct.filter(h => estadoResumenHallazgo(h) === 'FINALIZADO').length;
   const pct = paraPct.length ? Math.round(finalizadosPct / paraPct.length * 100) : 0;
 
