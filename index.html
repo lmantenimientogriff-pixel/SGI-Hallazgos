@@ -651,7 +651,7 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
     </div>
     <div class="tbl-card">
-      <div class="tbl-hdr"><div class="ct">Hallazgos — Sector → Responsable Directo → Responsable Implementación</div></div>
+      <div class="tbl-hdr"><div class="ct">Hallazgos — Departamento → Responsable Directo → Responsable Implementación</div></div>
       <div id="hacc-segmentado" style="padding:12px">Cargando...</div>
     </div>
   </div>
@@ -4194,28 +4194,37 @@ function accionesDeHallazgo(codigoLimpio){
 // "Sin acción cargada" dentro de su Responsable Directo. Si tiene varias
 // acciones con distintos responsables de implementación, aparece una vez
 // por cada uno (es correcto: está "bajo la órbita" de cada responsable).
+// Separa una celda de departamento que puede tener más de uno cargado
+// (salto de línea o coma entre ellos) en una lista de departamentos.
+function separarDepartamentos(texto){
+  const partes = String(texto||'').split(/\r\n|\r|\n|,/).map(p=>p.trim()).filter(Boolean);
+  return partes.length ? partes : ['Sin departamento'];
+}
+
 function agruparHallazgosPorSegmento(){
   const datos = (filtrados.length ? filtrados : rawData);
   const estructura = {};
 
   datos.forEach(h => {
-    const sector = h.sector || 'Sin sector';
+    const deptos = separarDepartamentos(h.depto);
     const respDir = h.respDir || 'Sin responsable directo';
     const codigoLimpio = codigoLimpioDe(h);
     const acciones = accionesDeHallazgo(codigoLimpio);
 
-    if(!estructura[sector]) estructura[sector] = {};
-    if(!estructura[sector][respDir]) estructura[sector][respDir] = {};
+    deptos.forEach(depto => {
+      if(!estructura[depto]) estructura[depto] = {};
+      if(!estructura[depto][respDir]) estructura[depto][respDir] = {};
 
-    if(!acciones.length){
-      const key = 'Sin acción cargada';
-      (estructura[sector][respDir][key] ||= []).push(h);
-    } else {
-      const implsUnicos = [...new Set(acciones.map(a => a.respImpl || 'Sin responsable de implementación'))];
-      implsUnicos.forEach(impl => {
-        (estructura[sector][respDir][impl] ||= []).push(h);
-      });
-    }
+      if(!acciones.length){
+        const key = 'Sin acción cargada';
+        (estructura[depto][respDir][key] ||= []).push(h);
+      } else {
+        const implsUnicos = [...new Set(acciones.map(a => a.respImpl || 'Sin responsable de implementación'))];
+        implsUnicos.forEach(impl => {
+          (estructura[depto][respDir][impl] ||= []).push(h);
+        });
+      }
+    });
   });
 
   return estructura;
@@ -4250,22 +4259,22 @@ function renderTablaHallazgosAcciones(){
   if(!datos.length){ cont.innerHTML = '<div class="empty">Sin hallazgos cargados</div>'; return; }
 
   const estructura = agruparHallazgosPorSegmento();
-  const sectores = Object.keys(estructura).sort();
+  const deptos = Object.keys(estructura).sort();
 
-  cont.innerHTML = sectores.map(sector => {
-    const respDirs = Object.keys(estructura[sector]).sort();
-    const totalSector = respDirs.reduce((s,rd) => s + Object.values(estructura[sector][rd]).reduce((s2,arr)=>s2+arr.length,0), 0);
+  cont.innerHTML = deptos.map(depto => {
+    const respDirs = Object.keys(estructura[depto]).sort();
+    const totalDepto = respDirs.reduce((s,rd) => s + Object.values(estructura[depto][rd]).reduce((s2,arr)=>s2+arr.length,0), 0);
     return `<details class="seg-sector">
-      <summary>${escHtml(sector)} <span class="seg-count">(${totalSector} hallazgo${totalSector!==1?'s':''})</span></summary>
+      <summary>${escHtml(depto)} <span class="seg-count">(${totalDepto} hallazgo${totalDepto!==1?'s':''})</span></summary>
       <div class="seg-body">
         ${respDirs.map(rd => {
-          const impls = Object.keys(estructura[sector][rd]).sort();
-          const totalRd = impls.reduce((s,im) => s + estructura[sector][rd][im].length, 0);
+          const impls = Object.keys(estructura[depto][rd]).sort();
+          const totalRd = impls.reduce((s,im) => s + estructura[depto][rd][im].length, 0);
           return `<details class="seg-respdir">
             <summary>${escHtml(rd)} <span class="seg-count">(${totalRd} hallazgo${totalRd!==1?'s':''})</span></summary>
             <div class="seg-body">
               ${impls.map(impl => {
-                const lista = estructura[sector][rd][impl];
+                const lista = estructura[depto][rd][impl];
                 return `<details class="seg-respimpl">
                   <summary>${escHtml(impl)} <span class="seg-count">(${lista.length})</span></summary>
                   ${tablaHallazgosSegmento(lista)}
