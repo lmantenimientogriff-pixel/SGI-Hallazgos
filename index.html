@@ -360,7 +360,9 @@ tbody tr:hover td{background:var(--surface2)}
 .seg-respdir{border-left:3px solid var(--blue);margin:8px 0 8px 14px}
 .seg-sector>summary,.seg-depto>summary,.seg-tipo>summary,.seg-respdir>summary{cursor:pointer;padding:9px 12px;font-size:12px;font-weight:700;color:var(--text);list-style:none;display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
 .seg-summary-label{display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0}
-.seg-summary-badges{display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
+.seg-summary-badges{display:grid;grid-template-columns:repeat(8, minmax(60px,74px));gap:4px;margin-left:auto;justify-items:end}
+.seg-badge-col{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:10px;text-align:center;white-space:nowrap;width:100%;box-sizing:border-box}
+.seg-badge-col-vacio{opacity:.2}
 .seg-sector>summary::before{content:"📁";font-size:11px}
 .seg-depto>summary::before{content:"📂";font-size:11px}
 .seg-tipo>summary::before{content:"🏷️";font-size:11px}
@@ -4298,7 +4300,11 @@ function estadoResumenHallazgo(h){
 }
 
 // Arma los indicadores de estado (badges) para una lista de hallazgos.
-function badgesEstado(listaHallazgos){
+// Arma los 8 indicadores como columnas de ANCHO FIJO, siempre en el mismo
+// orden — % Cumplimiento, Sin acción, Pendiente, En curso, Finalizado,
+// A verificar, Verificado c/obs., Verificado — aunque alguno esté en 0
+// (se muestra bien tenue, para no romper la alineación entre filas).
+function badgesFila(listaHallazgos){
   const conteo = {'SIN ACCIÓN':0, 'PENDIENTE':0, 'EN CURSO':0, 'FINALIZADO':0};
   listaHallazgos.forEach(h => { conteo[estadoResumenHallazgo(h)]++; });
 
@@ -4311,14 +4317,24 @@ function badgesEstado(listaHallazgos){
   const paraPct = sinOM.length ? sinOM : listaHallazgos;
   const finalizadosPct = paraPct.filter(h => estadoResumenHallazgo(h) === 'FINALIZADO').length;
   const pct = paraPct.length ? Math.round(finalizadosPct / paraPct.length * 100) : 0;
-
   const pctClase = pct>=80 ? 'seg-badge-fin' : pct>=50 ? 'seg-badge-curso' : 'seg-badge-pend';
-  const partes = [`<span class="seg-badge ${pctClase}" style="font-weight:800">${pct}% cumplido</span>`];
-  if(conteo['SIN ACCIÓN'])  partes.push(`<span class="seg-badge seg-badge-sinacc">⚪ ${conteo['SIN ACCIÓN']}</span>`);
-  if(conteo['PENDIENTE'])   partes.push(`<span class="seg-badge seg-badge-pend">🔴 ${conteo['PENDIENTE']}</span>`);
-  if(conteo['EN CURSO'])    partes.push(`<span class="seg-badge seg-badge-curso">🟡 ${conteo['EN CURSO']}</span>`);
-  if(conteo['FINALIZADO'])  partes.push(`<span class="seg-badge seg-badge-fin">🟢 ${conteo['FINALIZADO']}</span>`);
-  return partes.join('');
+
+  const conteoV = {'N/A':0, 'A VERIFICAR':0, 'VERIFICADO':0, 'VERIFICADO CON OBSERVACIONES':0};
+  listaHallazgos.forEach(h => { conteoV[estadoVerifResumenHallazgo(h)]++; });
+
+  const col = (clase, texto, activo) =>
+    `<span class="seg-badge-col ${clase}${activo?'':' seg-badge-col-vacio'}">${texto}</span>`;
+
+  return [
+    col(pctClase, `${pct}%`, true),
+    col('seg-badge-sinacc', `⚪ ${conteo['SIN ACCIÓN']}`, conteo['SIN ACCIÓN']>0),
+    col('seg-badge-pend', `🔴 ${conteo['PENDIENTE']}`, conteo['PENDIENTE']>0),
+    col('seg-badge-curso', `🟡 ${conteo['EN CURSO']}`, conteo['EN CURSO']>0),
+    col('seg-badge-fin', `🟢 ${conteo['FINALIZADO']}`, conteo['FINALIZADO']>0),
+    col('seg-badge-averificar', `🔎 ${conteoV['A VERIFICAR']}`, conteoV['A VERIFICAR']>0),
+    col('seg-badge-verificadoobs', `📝 ${conteoV['VERIFICADO CON OBSERVACIONES']}`, conteoV['VERIFICADO CON OBSERVACIONES']>0),
+    col('seg-badge-verificado', `✔️ ${conteoV['VERIFICADO']}`, conteoV['VERIFICADO']>0),
+  ].join('');
 }
 
 // Normaliza el estado de verificación a mayúsculas, tolerando variantes
@@ -4350,16 +4366,6 @@ function estadoVerifResumenHallazgo(h){
   return verifs.some(v => v === 'VERIFICA CON OBSERVACIONES') ? 'VERIFICADO CON OBSERVACIONES' : 'VERIFICADO';
 }
 
-function badgesVerificacion(listaHallazgos){
-  const conteo = {'N/A':0, 'A VERIFICAR':0, 'VERIFICADO':0, 'VERIFICADO CON OBSERVACIONES':0};
-  listaHallazgos.forEach(h => { conteo[estadoVerifResumenHallazgo(h)]++; });
-  const partes = [];
-  if(conteo['A VERIFICAR'])                    partes.push(`<span class="seg-badge seg-badge-averificar">🔎 A verificar: ${conteo['A VERIFICAR']}</span>`);
-  if(conteo['VERIFICADO CON OBSERVACIONES'])   partes.push(`<span class="seg-badge seg-badge-verificadoobs">📝 Verificado c/obs.: ${conteo['VERIFICADO CON OBSERVACIONES']}</span>`);
-  if(conteo['VERIFICADO'])                     partes.push(`<span class="seg-badge seg-badge-verificado">✔️ Verificado: ${conteo['VERIFICADO']}</span>`);
-  return partes.join('');
-}
-
 function tablaHallazgosSegmento(lista){
   return `<div class="seg-body"><table class="seg-tabla">
     <thead><tr><th>Código único</th><th>Fecha</th><th>Empresa</th><th>Descripción</th><th>Resp. Implementación</th><th>Estado</th><th>Acciones</th></tr></thead>
@@ -4377,7 +4383,7 @@ function tablaHallazgosSegmento(lista){
           <td>${r.empresa||'—'}</td>
           <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.desc)}">${r.desc||'—'}</td>
           <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(respImplUnicos.join(', '))}">${respImplUnicos.length ? escHtml(respImplUnicos.join(', ')) : '—'}</td>
-          <td>${badgesEstado([r])} ${badgesVerificacion([r])}</td>
+          <td>${badgesFila([r])}</td>
           <td>${btn}</td>
         </tr>`;
       }).join('')}
@@ -4393,7 +4399,7 @@ function renderTablaHallazgosAcciones(){
 
   // Indicadores totales SGI (sobre todos los hallazgos cargados, sin importar Sector/Departamento)
   const indTotales = document.getElementById('hacc-indicadores-totales');
-  if(indTotales) indTotales.innerHTML = `(${datos.length} hallazgo${datos.length!==1?'s':''}) ${badgesEstado(datos)} ${badgesVerificacion(datos)}`;
+  if(indTotales) indTotales.innerHTML = `(${datos.length} hallazgo${datos.length!==1?'s':''}) ${badgesFila(datos)}`;
 
   // Guardar qué ramas estaban abiertas antes de redibujar, para reabrirlas
   // después — así editar un campo no colapsa todo el árbol.
@@ -4410,27 +4416,27 @@ function renderTablaHallazgosAcciones(){
     const deptos = Object.keys(estructura[sector]).sort();
     const pathSector = sector;
     return `<details class="seg-sector" data-path="${escHtml(pathSector)}">
-      <summary><span class="seg-summary-label">${escHtml(sector)} <span class="seg-count">(${hSector.length} hallazgo${hSector.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesEstado(hSector)} ${badgesVerificacion(hSector)}</span></summary>
+      <summary><span class="seg-summary-label">${escHtml(sector)} <span class="seg-count">(${hSector.length} hallazgo${hSector.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesFila(hSector)}</span></summary>
       <div class="seg-body">
         ${deptos.map(depto => {
           const hDepto = recolectarHallazgos(estructura[sector][depto]);
           const tipos = ordenarTipos(Object.keys(estructura[sector][depto]));
           const pathDepto = pathSector + '|||' + depto;
           return `<details class="seg-depto" data-path="${escHtml(pathDepto)}">
-            <summary><span class="seg-summary-label">${escHtml(depto)} <span class="seg-count">(${hDepto.length} hallazgo${hDepto.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesEstado(hDepto)} ${badgesVerificacion(hDepto)}</span></summary>
+            <summary><span class="seg-summary-label">${escHtml(depto)} <span class="seg-count">(${hDepto.length} hallazgo${hDepto.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesFila(hDepto)}</span></summary>
             <div class="seg-body">
               ${tipos.map(tipo => {
                 const hTipo = recolectarHallazgos(estructura[sector][depto][tipo]);
                 const respDirs = Object.keys(estructura[sector][depto][tipo]).sort();
                 const pathTipo = pathDepto + '|||' + tipo;
                 return `<details class="seg-tipo" data-path="${escHtml(pathTipo)}">
-                  <summary><span class="seg-summary-label">${escHtml(tipo)} <span class="seg-count">(${hTipo.length} hallazgo${hTipo.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesEstado(hTipo)} ${badgesVerificacion(hTipo)}</span></summary>
+                  <summary><span class="seg-summary-label">${escHtml(tipo)} <span class="seg-count">(${hTipo.length} hallazgo${hTipo.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesFila(hTipo)}</span></summary>
                   <div class="seg-body">
                     ${respDirs.map(rd => {
                       const lista = estructura[sector][depto][tipo][rd];
                       const pathRd = pathTipo + '|||' + rd;
                       return `<details class="seg-respdir" data-path="${escHtml(pathRd)}">
-                        <summary><span class="seg-summary-label">${escHtml(rd)} <span class="seg-count">(${lista.length})</span></span><span class="seg-summary-badges">${badgesEstado(lista)} ${badgesVerificacion(lista)}</span></summary>
+                        <summary><span class="seg-summary-label">${escHtml(rd)} <span class="seg-count">(${lista.length})</span></span><span class="seg-summary-badges">${badgesFila(lista)}</span></summary>
                         ${tablaHallazgosSegmento(lista)}
                       </details>`;
                     }).join('')}
