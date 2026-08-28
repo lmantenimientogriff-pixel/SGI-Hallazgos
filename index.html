@@ -375,6 +375,10 @@ tbody tr:hover td{background:var(--surface2)}
 .seg-badge-pend{background:var(--red-bg);color:var(--red-text)}
 .seg-badge-curso{background:var(--amber-bg);color:var(--amber-text)}
 .seg-badge-fin{background:var(--green-bg);color:var(--green-text)}
+.seg-badge-averificar{background:var(--purple-bg);color:var(--purple-text)}
+.seg-badge-verificado{background:var(--blue-bg);color:var(--blue-text)}
+.seg-leyenda{font-size:10.5px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.seg-leyenda strong{color:var(--text)}
 
 .ssoma-filtros .fgrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .ssoma-filtros input[type=date]{width:100%;font-size:11px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);outline:none;cursor:pointer}
@@ -659,7 +663,19 @@ tbody tr:hover td{background:var(--surface2)}
     </div>
     <div class="tbl-card">
       <div class="tbl-hdr"><div class="ct">Hallazgos — Sector → Departamento → Tipo → Responsable Directo</div></div>
-      <div id="hacc-segmentado" style="padding:12px">Cargando...</div>
+      <div style="padding:12px 12px 0">
+        <div class="seg-leyenda">
+          <strong>Referencia:</strong>
+          <span class="seg-badge seg-badge-fin" style="font-weight:800">XX% cumplido</span> = hallazgos con TODAS sus acciones finalizadas
+          <span class="seg-badge seg-badge-sinacc">⚪ Sin acción</span>
+          <span class="seg-badge seg-badge-pend">🔴 Pendiente</span>
+          <span class="seg-badge seg-badge-curso">🟡 En curso</span>
+          <span class="seg-badge seg-badge-fin">🟢 Finalizado</span>
+          <span class="seg-badge seg-badge-averificar">🔎 A verificar</span>
+          <span class="seg-badge seg-badge-verificado">✔️ Verificado</span>
+        </div>
+      </div>
+      <div id="hacc-segmentado" style="padding:0 12px 12px">Cargando...</div>
     </div>
   </div>
 
@@ -4284,6 +4300,28 @@ function badgesEstado(listaHallazgos){
   return partes.join('');
 }
 
+// Estado de verificación de UN hallazgo, resumido:
+// "N/A" — todavía no tiene ninguna acción Finalizada (no hay nada que verificar aún)
+// "A VERIFICAR" — tiene al menos 1 acción Finalizada sin verificar
+// "VERIFICADO" — todas sus acciones Finalizadas ya están verificadas
+function estadoVerifResumenHallazgo(h){
+  const codigoLimpio = codigoLimpioDe(h);
+  const acciones = accionesDeHallazgo(codigoLimpio);
+  const finalizadas = acciones.filter(a => (a.estAcc||'').toUpperCase() === 'FINALIZADO');
+  if(!finalizadas.length) return 'N/A';
+  const verificadas = finalizadas.filter(a => (a.estVerif||'').trim() === 'Verifica');
+  return verificadas.length === finalizadas.length ? 'VERIFICADO' : 'A VERIFICAR';
+}
+
+function badgesVerificacion(listaHallazgos){
+  const conteo = {'N/A':0, 'A VERIFICAR':0, 'VERIFICADO':0};
+  listaHallazgos.forEach(h => { conteo[estadoVerifResumenHallazgo(h)]++; });
+  const partes = [];
+  if(conteo['A VERIFICAR']) partes.push(`<span class="seg-badge seg-badge-averificar">🔎 A verificar: ${conteo['A VERIFICAR']}</span>`);
+  if(conteo['VERIFICADO'])  partes.push(`<span class="seg-badge seg-badge-verificado">✔️ Verificado: ${conteo['VERIFICADO']}</span>`);
+  return partes.join('');
+}
+
 function tablaHallazgosSegmento(lista){
   return `<div class="seg-body"><table class="seg-tabla">
     <thead><tr><th>Código único</th><th>Fecha</th><th>Empresa</th><th>Descripción</th><th>Resp. Implementación</th><th>Estado</th><th>Acciones</th></tr></thead>
@@ -4301,7 +4339,7 @@ function tablaHallazgosSegmento(lista){
           <td>${r.empresa||'—'}</td>
           <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.desc)}">${r.desc||'—'}</td>
           <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(respImplUnicos.join(', '))}">${respImplUnicos.length ? escHtml(respImplUnicos.join(', ')) : '—'}</td>
-          <td>${badgesEstado([r])}</td>
+          <td>${badgesEstado([r])} ${badgesVerificacion([r])}</td>
           <td>${btn}</td>
         </tr>`;
       }).join('')}
@@ -4322,24 +4360,24 @@ function renderTablaHallazgosAcciones(){
     const hSector = recolectarHallazgos(estructura[sector]);
     const deptos = Object.keys(estructura[sector]).sort();
     return `<details class="seg-sector">
-      <summary>${escHtml(sector)} <span class="seg-count">(${hSector.length} hallazgo${hSector.length!==1?'s':''})</span> ${badgesEstado(hSector)}</summary>
+      <summary>${escHtml(sector)} <span class="seg-count">(${hSector.length} hallazgo${hSector.length!==1?'s':''})</span> ${badgesEstado(hSector)} ${badgesVerificacion(hSector)}</summary>
       <div class="seg-body">
         ${deptos.map(depto => {
           const hDepto = recolectarHallazgos(estructura[sector][depto]);
           const tipos = ordenarTipos(Object.keys(estructura[sector][depto]));
           return `<details class="seg-depto">
-            <summary>${escHtml(depto)} <span class="seg-count">(${hDepto.length} hallazgo${hDepto.length!==1?'s':''})</span> ${badgesEstado(hDepto)}</summary>
+            <summary>${escHtml(depto)} <span class="seg-count">(${hDepto.length} hallazgo${hDepto.length!==1?'s':''})</span> ${badgesEstado(hDepto)} ${badgesVerificacion(hDepto)}</summary>
             <div class="seg-body">
               ${tipos.map(tipo => {
                 const hTipo = recolectarHallazgos(estructura[sector][depto][tipo]);
                 const respDirs = Object.keys(estructura[sector][depto][tipo]).sort();
                 return `<details class="seg-tipo">
-                  <summary>${escHtml(tipo)} <span class="seg-count">(${hTipo.length} hallazgo${hTipo.length!==1?'s':''})</span> ${badgesEstado(hTipo)}</summary>
+                  <summary>${escHtml(tipo)} <span class="seg-count">(${hTipo.length} hallazgo${hTipo.length!==1?'s':''})</span> ${badgesEstado(hTipo)} ${badgesVerificacion(hTipo)}</summary>
                   <div class="seg-body">
                     ${respDirs.map(rd => {
                       const lista = estructura[sector][depto][tipo][rd];
                       return `<details class="seg-respdir">
-                        <summary>${escHtml(rd)} <span class="seg-count">(${lista.length})</span> ${badgesEstado(lista)}</summary>
+                        <summary>${escHtml(rd)} <span class="seg-count">(${lista.length})</span> ${badgesEstado(lista)} ${badgesVerificacion(lista)}</summary>
                         ${tablaHallazgosSegmento(lista)}
                       </details>`;
                     }).join('')}
@@ -4359,8 +4397,22 @@ function abrirVinculoHallazgo(codigo){
   if(!hallazgo) return;
   const codigoLimpio = codigoLimpioDe(hallazgo);
   const acciones = accionesDeHallazgo(codigoLimpio);
+  const puedeEditar = SESSION && (SESSION.rol === 'admin' || SESSION.rol === 'responsable');
 
   document.getElementById('vh-titulo').textContent = `Hallazgo ${codigo}`;
+
+  const estCorrCampo = puedeEditar
+    ? `<select class="edit-date" style="width:100%" onchange="saveFieldCorreccionHallazgo(${hallazgo.rowId},'estCorr',this.value,'${codigo.replace(/'/g,"\\'")}')">
+         <option value="">—</option>
+         <option value="PENDIENTE" ${hallazgo.estCorr==='PENDIENTE'?'selected':''}>Pendiente</option>
+         <option value="EN CURSO" ${hallazgo.estCorr==='EN CURSO'?'selected':''}>En curso</option>
+         <option value="FINALIZADO" ${hallazgo.estCorr==='FINALIZADO'?'selected':''}>Finalizado</option>
+       </select>`
+    : `<span>${hallazgo.estCorr||'—'}</span>`;
+
+  const fImplCorrCampo = puedeEditar
+    ? `<input type="date" class="edit-date" value="${hallazgo.fImplCorr?String(hallazgo.fImplCorr).split('T')[0]:''}" onchange="saveFieldCorreccionHallazgo(${hallazgo.rowId},'fImplCorr',this.value,'${codigo.replace(/'/g,"\\'")}')">`
+    : `<span>${fmtDate(hallazgo.fImplCorr)}</span>`;
 
   document.getElementById('vh-datos').innerHTML = `
     <div class="vinculo-side-title">Datos del hallazgo</div>
@@ -4371,10 +4423,12 @@ function abrirVinculoHallazgo(codigo){
     <div class="vinculo-row"><label>Sector</label><span>${hallazgo.sector||'—'}</span></div>
     <div class="vinculo-row"><label>Resp. Directo</label><span>${hallazgo.respDir||'—'}</span></div>
     <div class="vinculo-row" style="align-items:flex-start"><label>Descripción</label><span style="font-size:10px;line-height:1.4;font-weight:400">${escHtml(hallazgo.desc)}</span></div>
-    <div class="vinculo-side-title" style="margin-top:14px">Corrección (inmediata — sin cambios, se edita desde Detalle)</div>
+    <div class="vinculo-side-title" style="margin-top:14px">Corrección (inmediata)</div>
     <div class="vinculo-row" style="align-items:flex-start"><label>Corrección</label><span style="font-size:10px;line-height:1.4;font-weight:400">${escHtml(hallazgo.correccion)||'—'}</span></div>
     <div class="vinculo-row"><label>Resp. corrección</label><span>${hallazgo.respCorr||'—'}</span></div>
-    <div class="vinculo-row"><label>Estado corrección</label><span>${hallazgo.estCorr||'—'}</span></div>
+    <div class="vinculo-row"><label>Fecha máx. impl.</label><span>${fmtDate(hallazgo.fMaxCorr)}</span></div>
+    <div class="vinculo-row"><label>Fecha implementación</label>${fImplCorrCampo}</div>
+    <div class="vinculo-row"><label>Estado corrección</label>${estCorrCampo}</div>
   `;
 
   document.getElementById('vh-acciones').innerHTML = `
@@ -4388,6 +4442,16 @@ function abrirVinculoHallazgo(codigo){
   mostrarBotonAgregarAccionHallazgo();
 
   document.getElementById('vinculo-hallazgo-overlay').classList.add('open');
+}
+
+// Guarda un campo de la Corrección (inmediata) reutilizando saveField(), la
+// misma función que ya usa la pestaña Detalle — así queda todo sincronizado
+// sin duplicar lógica de guardado. Después re-abre este modal para que se
+// vea el cambio reflejado acá también.
+async function saveFieldCorreccionHallazgo(rowId, campo, valor, codigo){
+  await saveField(rowId, campo, valor);
+  abrirVinculoHallazgo(codigo);
+  renderTablaHallazgosAcciones();
 }
 
 function cerrarVinculoHallazgo(){
