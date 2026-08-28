@@ -1454,24 +1454,24 @@ function renderTodo(){
   const om=data.filter(r=>r.tipoHallazgo==='Oportunidad de Mejora').length;
   const fort=data.filter(r=>r.tipoHallazgo==='Fortaleza').length;
   const integ=data.filter(r=>r.tipoHallazgo==='Integral').length;
-  const fin=data.filter(r=>r.estAcc.trim()==='FINALIZADO').length;
-  const cur=data.filter(r=>r.estAcc.trim()==='EN CURSO').length;
-  const pen=data.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
+  const fin=data.filter(r=>estAccClasico(r)==='FINALIZADO').length;
+  const cur=data.filter(r=>estAccClasico(r)==='EN CURSO').length;
+  const pen=data.filter(r=>estAccClasico(r)==='PENDIENTE').length;
   const hoy=new Date();
   // Separar OM del resto
   const dataOM=data.filter(r=>r.tipoHallazgo==='Oportunidad de Mejora');
   const dataSinOM=data.filter(r=>r.tipoHallazgo!=='Oportunidad de Mejora');
   // KPI 11 — Avance Acciones (excluye OM)
-  const finAc=dataSinOM.filter(r=>r.estAcc.trim()==='FINALIZADO').length;
-  const enCurso=dataSinOM.filter(r=>r.estAcc.trim()==='EN CURSO').length;
-  const pendAc=dataSinOM.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
-  const pendBL=dataSinOM.filter(r=>r.estCierre==='PENDIENTE').length;
-  const sinCierre=data.filter(r=>r.estCierre==='PENDIENTE').length;
+  const finAc=dataSinOM.filter(r=>estAccClasico(r)==='FINALIZADO').length;
+  const enCurso=dataSinOM.filter(r=>estAccClasico(r)==='EN CURSO').length;
+  const pendAc=dataSinOM.filter(r=>estAccClasico(r)==='PENDIENTE').length;
+  const pendBL=dataSinOM.filter(r=>procesoPendiente(r)).length;
+  const sinCierre=data.filter(r=>procesoPendiente(r)).length;
   // KPI 12 — Cumplimiento OM
-  const omFin=dataOM.filter(r=>r.estAcc.trim()==='FINALIZADO').length;
-  const omCur=dataOM.filter(r=>r.estAcc.trim()==='EN CURSO').length;
-  const omPen=dataOM.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
-  const omBL=dataOM.filter(r=>r.estCierre==='PENDIENTE').length;
+  const omFin=dataOM.filter(r=>estAccClasico(r)==='FINALIZADO').length;
+  const omCur=dataOM.filter(r=>estAccClasico(r)==='EN CURSO').length;
+  const omPen=dataOM.filter(r=>estAccClasico(r)==='PENDIENTE').length;
+  const omBL=dataOM.filter(r=>procesoPendiente(r)).length;
   const omDen=omFin+omCur+omPen+omBL;
   const omAv=omDen>0?Math.round(omFin/omDen*100):0;
   // FORMULA: FINALIZADO(AC) / (FINALIZADO(AC) + EN CURSO(AC) + PENDIENTE(AC) + PENDIENTE(BL))
@@ -2032,6 +2032,7 @@ async function recargar(){
       return d && d >= fechaCorte;
     });
     filtrados=[...rawData];
+    await cargarAccionesHallazgos(); // necesario ANTES de calcular KPIs, ya usan la hoja nueva de acciones
     poblarFiltros(rawData);aplicarFiltros();
     setStatus('live',`${rawData.length} hallazgos cargados en tiempo real`);
     const _sub=document.getElementById('subtitle');if(_sub)_sub.textContent=`${rawData.length} hallazgos · Datos en vivo · Google Sheets`;
@@ -4297,6 +4298,24 @@ function estadoResumenHallazgo(h){
   if(estados.every(e => e==='FINALIZADO')) return 'FINALIZADO';
   if(estados.some(e => e==='EN CURSO')) return 'EN CURSO';
   return 'PENDIENTE';
+}
+
+// Igual que estadoResumenHallazgo(), pero mapeado a los 3 estados clásicos
+// que usan las tarjetas/KPIs y pestañas viejas (Detalle, Plan de Acción,
+// Verificaciones, Responsables). "SIN ACCIÓN" cuenta como PENDIENTE — mismo
+// criterio que el sistema viejo usaba cuando ESTADO venía vacío.
+function estAccClasico(h){
+  const resumen = estadoResumenHallazgo(h);
+  return resumen === 'SIN ACCIÓN' ? 'PENDIENTE' : resumen;
+}
+
+// "Cierre Proceso" (histórico) marcaba PENDIENTE hasta que se cargaba la
+// causa raíz + al menos una acción correctiva. Ahora eso se sabe directo:
+// si el hallazgo tiene alguna acción cargada en la hoja nueva, el proceso
+// ya se hizo — sin importar en qué estado esté esa acción.
+function procesoPendiente(h){
+  const codigoLimpio = codigoLimpioDe(h);
+  return accionesDeHallazgo(codigoLimpio).length === 0;
 }
 
 // Arma los indicadores de estado (badges) para una lista de hallazgos.
