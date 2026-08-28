@@ -358,7 +358,9 @@ tbody tr:hover td{background:var(--surface2)}
 .seg-depto{border-left:3px solid var(--amber);margin:8px 0 8px 14px}
 .seg-tipo{border-left:3px solid var(--green);margin:8px 0 8px 14px}
 .seg-respdir{border-left:3px solid var(--blue);margin:8px 0 8px 14px}
-.seg-sector>summary,.seg-depto>summary,.seg-tipo>summary,.seg-respdir>summary{cursor:pointer;padding:9px 12px;font-size:12px;font-weight:700;color:var(--text);list-style:none;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.seg-sector>summary,.seg-depto>summary,.seg-tipo>summary,.seg-respdir>summary{cursor:pointer;padding:9px 12px;font-size:12px;font-weight:700;color:var(--text);list-style:none;display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
+.seg-summary-label{display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0}
+.seg-summary-badges{display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
 .seg-sector>summary::before{content:"📁";font-size:11px}
 .seg-depto>summary::before{content:"📂";font-size:11px}
 .seg-tipo>summary::before{content:"🏷️";font-size:11px}
@@ -380,6 +382,8 @@ tbody tr:hover td{background:var(--surface2)}
 .seg-badge-verificadoobs{background:var(--amber-bg);color:var(--amber-text)}
 .seg-leyenda{font-size:10.5px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .seg-leyenda strong{color:var(--text)}
+.seg-leyenda-explicacion{font-size:9.5px;color:var(--text3);background:transparent;padding:6px 12px 10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg-leyenda-explicacion strong{color:var(--text2);font-size:9.5px}
 
 .ssoma-filtros .fgrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .ssoma-filtros input[type=date]{width:100%;font-size:11px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);outline:none;cursor:pointer}
@@ -535,7 +539,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="tab" onclick="switchTab('detalle',this)"><i class="ti ti-table" style="font-size:12px"></i> Detalle</div>
     <div class="tab" onclick="switchTab('plan',this)"><i class="ti ti-file-description" style="font-size:12px"></i> Plan de Acción</div>
     <div class="tab" onclick="switchTab('verificaciones',this)"><i class="ti ti-eye-check" style="font-size:12px"></i> Verificaciones</div>
-    <div class="tab" style="color:var(--purple)" onclick="switchTab('haccionesprueba',this)"><i class="ti ti-flask" style="font-size:12px"></i> Causa Raíz (prueba)</div>
+    <div class="tab" onclick="switchTab('haccionesprueba',this)"><i class="ti ti-sitemap" style="font-size:12px"></i> Gestión Hallazgos</div>
     <div class="tab" onclick="switchTab('ssoma',this)"><i class="ti ti-alert-triangle" style="font-size:12px"></i> Acc./Incidentes</div>
     <div class="tab" onclick="switchTab('ssomaanalisis',this)"><i class="ti ti-chart-histogram" style="font-size:12px"></i> Gráficos SSOMA</div>
     <div class="tab" id="tab-log-btn" onclick="switchTab('log',this)" style="display:none"><i class="ti ti-history" style="font-size:12px"></i> Log de cambios</div>
@@ -651,11 +655,8 @@ tbody tr:hover td{background:var(--surface2)}
     <div id="verif-container"></div>
   </div>
 
-  <!-- ═══════════ TAB CAUSA RAÍZ (PRUEBA) — HALLAZGOS ═══════════ -->
+  <!-- ═══════════ TAB GESTIÓN HALLAZGOS — CAUSA RAÍZ Y ACCIONES ═══════════ -->
   <div class="tcontent" id="tab-haccionesprueba">
-    <div style="background:var(--purple-bg);border:1px solid var(--purple);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--purple-text)">
-      <i class="ti ti-flask"></i> <strong>Pestaña de prueba</strong> — para probar el circuito de causa raíz + acciones de Hallazgos en la hoja separada, sin tocar Detalle/Responsables todavía.
-    </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <div>
         <div style="font-size:13px;font-weight:700;color:var(--text)">Hallazgos — Causa raíz y acciones</div>
@@ -666,8 +667,12 @@ tbody tr:hover td{background:var(--surface2)}
       <div class="tbl-hdr"><div class="ct">Hallazgos — Sector → Departamento → Tipo → Responsable Directo</div></div>
       <div style="padding:12px 12px 0">
         <div class="seg-leyenda">
-          <strong>Referencia:</strong>
-          <span class="seg-badge seg-badge-fin" style="font-weight:800">XX% cumplido</span> = hallazgos con TODAS sus acciones finalizadas (no cuenta Oportunidades de Mejora)
+          <strong>Indicadores SGI:</strong>
+          <span id="hacc-indicadores-totales">Cargando...</span>
+        </div>
+        <div class="seg-leyenda-explicacion">
+          <strong>Cómo se calcula:</strong>
+          <span class="seg-badge seg-badge-fin" style="font-weight:800">XX% cumplido</span> = hallazgos con TODAS sus acciones finalizadas (no cuenta Oportunidades de Mejora, salvo dentro de su propio grupo)
           <span class="seg-badge seg-badge-sinacc">⚪ Sin acción</span>
           <span class="seg-badge seg-badge-pend">🔴 Pendiente</span>
           <span class="seg-badge seg-badge-curso">🟡 En curso</span>
@@ -1490,6 +1495,7 @@ function renderTodo(){
   renderCharts(data);renderResponsables(data);renderTabla(data);
   if(document.getElementById('tab-plan')?.classList.contains('active')) renderPlan(data);
   if(document.getElementById('tab-verificaciones')?.classList.contains('active')) renderVerificaciones(data);
+  if(document.getElementById('tab-haccionesprueba')?.classList.contains('active') && haccCargado) renderTablaHallazgosAcciones();
   setTimeout(initAutoResize,100);
 }
 
@@ -4315,6 +4321,19 @@ function badgesEstado(listaHallazgos){
   return partes.join('');
 }
 
+// Normaliza el estado de verificación a mayúsculas, tolerando variantes
+// típicas ("Verifica c/Obs.", "VERIFICA CON OBSERVACIONES", etc.) — mismo
+// criterio de tolerancia que ya usa normVerif() en el sistema viejo, porque
+// los datos históricos migrados no siempre vienen con el mismo formato.
+function normEstVerifAccion(v){
+  const t = String(v||'').trim().toUpperCase();
+  if(!t) return '';
+  if(t==='VERIFICA') return 'VERIFICA';
+  if(t==='NO VERIFICA') return 'NO VERIFICA';
+  if(t.includes('VERIFICA') && t.includes('OBS')) return 'VERIFICA CON OBSERVACIONES';
+  return t;
+}
+
 // Estado de verificación de UN hallazgo, resumido:
 // "N/A" — todavía no tiene ninguna acción Finalizada (no hay nada que verificar aún)
 // "A VERIFICAR" — tiene al menos 1 acción Finalizada sin verificar
@@ -4324,11 +4343,11 @@ function estadoVerifResumenHallazgo(h){
   const acciones = accionesDeHallazgo(codigoLimpio);
   const finalizadas = acciones.filter(a => (a.estAcc||'').toUpperCase() === 'FINALIZADO');
   if(!finalizadas.length) return 'N/A';
-  const verifs = finalizadas.map(a => (a.estVerif||'').trim());
-  const todasVerificadas = verifs.every(v => v === 'Verifica' || v === 'Verifica con Observaciones');
+  const verifs = finalizadas.map(a => normEstVerifAccion(a.estVerif));
+  const todasVerificadas = verifs.every(v => v === 'VERIFICA' || v === 'VERIFICA CON OBSERVACIONES');
   if(!todasVerificadas) return 'A VERIFICAR';
   // Si están todas verificadas, distinguir si alguna quedó "con observaciones"
-  return verifs.some(v => v === 'Verifica con Observaciones') ? 'VERIFICADO CON OBSERVACIONES' : 'VERIFICADO';
+  return verifs.some(v => v === 'VERIFICA CON OBSERVACIONES') ? 'VERIFICADO CON OBSERVACIONES' : 'VERIFICADO';
 }
 
 function badgesVerificacion(listaHallazgos){
@@ -4372,6 +4391,10 @@ function renderTablaHallazgosAcciones(){
   const datos = (filtrados.length ? filtrados : rawData);
   if(!datos.length){ cont.innerHTML = '<div class="empty">Sin hallazgos cargados</div>'; return; }
 
+  // Indicadores totales SGI (sobre todos los hallazgos cargados, sin importar Sector/Departamento)
+  const indTotales = document.getElementById('hacc-indicadores-totales');
+  if(indTotales) indTotales.innerHTML = `(${datos.length} hallazgo${datos.length!==1?'s':''}) ${badgesEstado(datos)} ${badgesVerificacion(datos)}`;
+
   // Guardar qué ramas estaban abiertas antes de redibujar, para reabrirlas
   // después — así editar un campo no colapsa todo el árbol.
   const abiertasAntes = new Set();
@@ -4387,27 +4410,27 @@ function renderTablaHallazgosAcciones(){
     const deptos = Object.keys(estructura[sector]).sort();
     const pathSector = sector;
     return `<details class="seg-sector" data-path="${escHtml(pathSector)}">
-      <summary>${escHtml(sector)} <span class="seg-count">(${hSector.length} hallazgo${hSector.length!==1?'s':''})</span> ${badgesEstado(hSector)} ${badgesVerificacion(hSector)}</summary>
+      <summary><span class="seg-summary-label">${escHtml(sector)} <span class="seg-count">(${hSector.length} hallazgo${hSector.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesEstado(hSector)} ${badgesVerificacion(hSector)}</span></summary>
       <div class="seg-body">
         ${deptos.map(depto => {
           const hDepto = recolectarHallazgos(estructura[sector][depto]);
           const tipos = ordenarTipos(Object.keys(estructura[sector][depto]));
           const pathDepto = pathSector + '|||' + depto;
           return `<details class="seg-depto" data-path="${escHtml(pathDepto)}">
-            <summary>${escHtml(depto)} <span class="seg-count">(${hDepto.length} hallazgo${hDepto.length!==1?'s':''})</span> ${badgesEstado(hDepto)} ${badgesVerificacion(hDepto)}</summary>
+            <summary><span class="seg-summary-label">${escHtml(depto)} <span class="seg-count">(${hDepto.length} hallazgo${hDepto.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesEstado(hDepto)} ${badgesVerificacion(hDepto)}</span></summary>
             <div class="seg-body">
               ${tipos.map(tipo => {
                 const hTipo = recolectarHallazgos(estructura[sector][depto][tipo]);
                 const respDirs = Object.keys(estructura[sector][depto][tipo]).sort();
                 const pathTipo = pathDepto + '|||' + tipo;
                 return `<details class="seg-tipo" data-path="${escHtml(pathTipo)}">
-                  <summary>${escHtml(tipo)} <span class="seg-count">(${hTipo.length} hallazgo${hTipo.length!==1?'s':''})</span> ${badgesEstado(hTipo)} ${badgesVerificacion(hTipo)}</summary>
+                  <summary><span class="seg-summary-label">${escHtml(tipo)} <span class="seg-count">(${hTipo.length} hallazgo${hTipo.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesEstado(hTipo)} ${badgesVerificacion(hTipo)}</span></summary>
                   <div class="seg-body">
                     ${respDirs.map(rd => {
                       const lista = estructura[sector][depto][tipo][rd];
                       const pathRd = pathTipo + '|||' + rd;
                       return `<details class="seg-respdir" data-path="${escHtml(pathRd)}">
-                        <summary>${escHtml(rd)} <span class="seg-count">(${lista.length})</span> ${badgesEstado(lista)} ${badgesVerificacion(lista)}</summary>
+                        <summary><span class="seg-summary-label">${escHtml(rd)} <span class="seg-count">(${lista.length})</span></span><span class="seg-summary-badges">${badgesEstado(lista)} ${badgesVerificacion(lista)}</span></summary>
                         ${tablaHallazgosSegmento(lista)}
                       </details>`;
                     }).join('')}
@@ -4522,12 +4545,13 @@ function vinculoAccionHallazgoCard(a){
     ? `<input type="date" class="edit-date" value="${a.fImpl?String(a.fImpl).split('T')[0]:''}" onchange="saveFieldAccionHallazgo('${a.numeroAccion}','fImpl',this.value,this)">`
     : `<span>${fmtDate(a.fImpl)}</span>`;
 
+  const estVerifNorm = normEstVerifAccion(a.estVerif);
   const estVerifSelect = puedeEditar
     ? `<select class="edit-date" style="width:100%" onchange="saveFieldAccionHallazgo('${a.numeroAccion}','estVerif',this.value,this)">
          <option value="">Sin verificar</option>
-         <option value="Verifica" ${a.estVerif==='Verifica'?'selected':''}>Verifica</option>
-         <option value="Verifica con Observaciones" ${a.estVerif==='Verifica con Observaciones'?'selected':''}>Verifica con Observaciones</option>
-         <option value="No Verifica" ${a.estVerif==='No Verifica'?'selected':''}>No Verifica</option>
+         <option value="Verifica" ${estVerifNorm==='VERIFICA'?'selected':''}>Verifica</option>
+         <option value="Verifica con Observaciones" ${estVerifNorm==='VERIFICA CON OBSERVACIONES'?'selected':''}>Verifica con Observaciones</option>
+         <option value="No Verifica" ${estVerifNorm==='NO VERIFICA'?'selected':''}>No Verifica</option>
        </select>`
     : `<span>${a.estVerif||'Sin verificar'}</span>`;
 
