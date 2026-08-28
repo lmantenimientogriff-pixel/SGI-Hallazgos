@@ -4273,7 +4273,10 @@ function estadoResumenHallazgo(h){
 function badgesEstado(listaHallazgos){
   const conteo = {'SIN ACCIÓN':0, 'PENDIENTE':0, 'EN CURSO':0, 'FINALIZADO':0};
   listaHallazgos.forEach(h => { conteo[estadoResumenHallazgo(h)]++; });
-  const partes = [];
+  const total = listaHallazgos.length;
+  const pct = total ? Math.round(conteo['FINALIZADO'] / total * 100) : 0;
+  const pctClase = pct>=80 ? 'seg-badge-fin' : pct>=50 ? 'seg-badge-curso' : 'seg-badge-pend';
+  const partes = [`<span class="seg-badge ${pctClase}" style="font-weight:800">${pct}% cumplido</span>`];
   if(conteo['SIN ACCIÓN'])  partes.push(`<span class="seg-badge seg-badge-sinacc">⚪ ${conteo['SIN ACCIÓN']}</span>`);
   if(conteo['PENDIENTE'])   partes.push(`<span class="seg-badge seg-badge-pend">🔴 ${conteo['PENDIENTE']}</span>`);
   if(conteo['EN CURSO'])    partes.push(`<span class="seg-badge seg-badge-curso">🟡 ${conteo['EN CURSO']}</span>`);
