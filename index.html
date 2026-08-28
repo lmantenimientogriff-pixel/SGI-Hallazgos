@@ -352,6 +352,23 @@ tbody tr:hover td{background:var(--surface2)}
 .accion-nueva-fila .quitar-fila{position:absolute;top:8px;right:8px;font-size:10px;padding:2px 7px;background:var(--red-bg);color:var(--red-text);border:none}
 .accion-nueva-fila-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
 
+/* Segmentación Sector → Resp. Directo → Resp. Implementación (Hallazgos) */
+.seg-sector,.seg-respdir,.seg-respimpl{border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;background:var(--surface)}
+.seg-sector{border-left:3px solid var(--red)}
+.seg-respdir{border-left:3px solid var(--blue);margin:8px 0 8px 14px}
+.seg-respimpl{border-left:3px solid var(--purple);margin:8px 0 8px 14px}
+.seg-sector>summary,.seg-respdir>summary,.seg-respimpl>summary{cursor:pointer;padding:9px 12px;font-size:12px;font-weight:700;color:var(--text);list-style:none;display:flex;align-items:center;gap:6px}
+.seg-sector>summary::before{content:"📁";font-size:11px}
+.seg-respdir>summary::before{content:"👤";font-size:11px}
+.seg-respimpl>summary::before{content:"🔧";font-size:11px}
+.seg-sector>summary::-webkit-details-marker,.seg-respdir>summary::-webkit-details-marker,.seg-respimpl>summary::-webkit-details-marker{display:none}
+.seg-count{font-weight:400;color:var(--text3);font-size:11px}
+.seg-body{padding:0 12px 10px}
+.seg-tabla{width:100%;border-collapse:collapse;margin-top:4px}
+.seg-tabla th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--text3);padding:6px 8px;border-bottom:1px solid var(--border)}
+.seg-tabla td{padding:6px 8px;border-bottom:1px solid var(--border);font-size:11px}
+.seg-tabla tr:last-child td{border-bottom:none}
+
 .ssoma-filtros .fgrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .ssoma-filtros input[type=date]{width:100%;font-size:11px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);outline:none;cursor:pointer}
 .ssoma-filtros input[type=date]:focus{border-color:var(--blue)}
@@ -634,16 +651,8 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
     </div>
     <div class="tbl-card">
-      <div class="tbl-hdr"><div class="ct">Hallazgos</div></div>
-      <div class="twrap">
-        <table>
-          <thead><tr>
-            <th>Código único</th><th>Fecha</th><th>Empresa</th><th>Tipo</th>
-            <th>Descripción</th><th>Resp. Directo</th><th>Acciones</th>
-          </tr></thead>
-          <tbody id="hacc-tbody"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
-        </table>
-      </div>
+      <div class="tbl-hdr"><div class="ct">Hallazgos — Sector → Responsable Directo → Responsable Implementación</div></div>
+      <div id="hacc-segmentado" style="padding:12px">Cargando...</div>
     </div>
   </div>
 
@@ -4137,7 +4146,7 @@ let listaCodigosHallazgos = []; // array por posición (índice = rowId), no dep
 
 async function cargarAccionesHallazgos(){
   if(haccCargado){ renderTablaHallazgosAcciones(); return; }
-  const tbody = document.getElementById('hacc-tbody');
+  const cont = document.getElementById('hacc-segmentado');
   try{
     const [resAcc, resMapa] = await Promise.all([
       fetch(API_URL() + '?action=getAccionesHallazgos'),
@@ -4155,7 +4164,7 @@ async function cargarAccionesHallazgos(){
     document.getElementById('hacc-subtitle').textContent = `${(filtrados.length?filtrados:rawData).length} hallazgos · ${rawAccionesHallazgos.length} acciones cargadas`;
     renderTablaHallazgosAcciones();
   }catch(e){
-    tbody.innerHTML = `<tr><td colspan="7" class="empty">Error al cargar: ${e.message}</td></tr>`;
+    cont.innerHTML = `<div class="empty">Error al cargar: ${escHtml(e.message)}</div>`;
     document.getElementById('hacc-subtitle').textContent = 'Error al cargar';
     console.error(e);
   }
@@ -4179,24 +4188,94 @@ function accionesDeHallazgo(codigoLimpio){
   );
 }
 
-function renderTablaHallazgosAcciones(){
-  const tbody = document.getElementById('hacc-tbody');
+// Agrupa los hallazgos en 3 niveles: Sector → Responsable Directo →
+// Responsable de Implementación (de la acción correctiva). Si el hallazgo
+// todavía no tiene ninguna acción cargada, cae en el grupo
+// "Sin acción cargada" dentro de su Responsable Directo. Si tiene varias
+// acciones con distintos responsables de implementación, aparece una vez
+// por cada uno (es correcto: está "bajo la órbita" de cada responsable).
+function agruparHallazgosPorSegmento(){
   const datos = (filtrados.length ? filtrados : rawData);
-  if(!datos.length){ tbody.innerHTML = '<tr><td colspan="7" class="empty">Sin hallazgos cargados</td></tr>'; return; }
-  tbody.innerHTML = datos.map(r => {
-    const codigo = String(r.codigoUnico||'').trim();
-    const codigoLimpio = codigoLimpioDe(r);
-    const nAcc = accionesDeHallazgo(codigoLimpio).length;
-    const btn = `<button class="vinculo-link-btn" onclick="abrirVinculoHallazgo('${codigo.replace(/'/g,"\\'")}')">${nAcc ? nAcc+' acc. →' : '+ Agregar'}</button>`;
-    return `<tr>
-      <td><strong>${codigo||'—'}</strong></td>
-      <td style="font-size:10.5px;white-space:nowrap">${fmtDate(r.fechaAud)}</td>
-      <td style="font-size:11px">${r.empresa||'—'}</td>
-      <td style="font-size:11px">${r.tipoHallazgo||'—'}</td>
-      <td style="font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.desc)}">${r.desc||'—'}</td>
-      <td style="font-size:11px">${r.respDir||'—'}</td>
-      <td>${btn}</td>
-    </tr>`;
+  const estructura = {};
+
+  datos.forEach(h => {
+    const sector = h.sector || 'Sin sector';
+    const respDir = h.respDir || 'Sin responsable directo';
+    const codigoLimpio = codigoLimpioDe(h);
+    const acciones = accionesDeHallazgo(codigoLimpio);
+
+    if(!estructura[sector]) estructura[sector] = {};
+    if(!estructura[sector][respDir]) estructura[sector][respDir] = {};
+
+    if(!acciones.length){
+      const key = 'Sin acción cargada';
+      (estructura[sector][respDir][key] ||= []).push(h);
+    } else {
+      const implsUnicos = [...new Set(acciones.map(a => a.respImpl || 'Sin responsable de implementación'))];
+      implsUnicos.forEach(impl => {
+        (estructura[sector][respDir][impl] ||= []).push(h);
+      });
+    }
+  });
+
+  return estructura;
+}
+
+function tablaHallazgosSegmento(lista){
+  return `<div class="seg-body"><table class="seg-tabla">
+    <thead><tr><th>Código único</th><th>Fecha</th><th>Empresa</th><th>Tipo</th><th>Descripción</th><th>Acciones</th></tr></thead>
+    <tbody>
+      ${lista.map(r => {
+        const codigo = String(r.codigoUnico||'').trim();
+        const codigoLimpio = codigoLimpioDe(r);
+        const nAcc = accionesDeHallazgo(codigoLimpio).length;
+        const btn = `<button class="vinculo-link-btn" onclick="abrirVinculoHallazgo('${codigo.replace(/'/g,"\\'")}')">${nAcc ? nAcc+' acc. →' : '+ Agregar'}</button>`;
+        return `<tr>
+          <td><strong>${codigo||'—'}</strong></td>
+          <td style="white-space:nowrap">${fmtDate(r.fechaAud)}</td>
+          <td>${r.empresa||'—'}</td>
+          <td>${r.tipoHallazgo||'—'}</td>
+          <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.desc)}">${r.desc||'—'}</td>
+          <td>${btn}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function renderTablaHallazgosAcciones(){
+  const cont = document.getElementById('hacc-segmentado');
+  if(!cont) return;
+  const datos = (filtrados.length ? filtrados : rawData);
+  if(!datos.length){ cont.innerHTML = '<div class="empty">Sin hallazgos cargados</div>'; return; }
+
+  const estructura = agruparHallazgosPorSegmento();
+  const sectores = Object.keys(estructura).sort();
+
+  cont.innerHTML = sectores.map(sector => {
+    const respDirs = Object.keys(estructura[sector]).sort();
+    const totalSector = respDirs.reduce((s,rd) => s + Object.values(estructura[sector][rd]).reduce((s2,arr)=>s2+arr.length,0), 0);
+    return `<details class="seg-sector">
+      <summary>${escHtml(sector)} <span class="seg-count">(${totalSector} hallazgo${totalSector!==1?'s':''})</span></summary>
+      <div class="seg-body">
+        ${respDirs.map(rd => {
+          const impls = Object.keys(estructura[sector][rd]).sort();
+          const totalRd = impls.reduce((s,im) => s + estructura[sector][rd][im].length, 0);
+          return `<details class="seg-respdir">
+            <summary>${escHtml(rd)} <span class="seg-count">(${totalRd} hallazgo${totalRd!==1?'s':''})</span></summary>
+            <div class="seg-body">
+              ${impls.map(impl => {
+                const lista = estructura[sector][rd][impl];
+                return `<details class="seg-respimpl">
+                  <summary>${escHtml(impl)} <span class="seg-count">(${lista.length})</span></summary>
+                  ${tablaHallazgosSegmento(lista)}
+                </details>`;
+              }).join('')}
+            </div>
+          </details>`;
+        }).join('')}
+      </div>
+    </details>`;
   }).join('');
 }
 
