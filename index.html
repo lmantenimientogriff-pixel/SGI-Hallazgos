@@ -4408,6 +4408,11 @@ function abrirVinculoHallazgo(codigo){
   const acciones = accionesDeHallazgo(codigoLimpio);
   const puedeEditar = SESSION && (SESSION.rol === 'admin' || SESSION.rol === 'responsable');
 
+  // Se asignan ANTES de dibujar nada, porque vinculoAccionHallazgoCard()
+  // (llamada más abajo) ya las necesita para armar el botón de evidencia.
+  hAccionSerialActivo = codigoLimpio; // se usa como prefijo para nuevas acciones de ESTE hallazgo puntual
+  hAccionCodigoActivo = codigo;       // Código único real, para reabrir el modal después
+
   document.getElementById('vh-titulo').textContent = `Hallazgo ${codigo}`;
 
   const estCorrCampo = puedeEditar
@@ -4453,8 +4458,6 @@ function abrirVinculoHallazgo(codigo){
     ${acciones.length ? acciones.map(a => vinculoAccionHallazgoCard(a)).join('') : '<div class="empty">Sin acciones registradas</div>'}
   `;
 
-  hAccionSerialActivo = codigoLimpio; // se usa como prefijo para nuevas acciones de ESTE hallazgo puntual
-  hAccionCodigoActivo = codigo;       // Código único real, para reabrir el modal después
   hAccionFormAbierto = false;
   mostrarBotonAgregarAccionHallazgo();
 
