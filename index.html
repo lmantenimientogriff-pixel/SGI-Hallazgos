@@ -4362,30 +4362,41 @@ function renderTablaHallazgosAcciones(){
   const datos = (filtrados.length ? filtrados : rawData);
   if(!datos.length){ cont.innerHTML = '<div class="empty">Sin hallazgos cargados</div>'; return; }
 
+  // Guardar qué ramas estaban abiertas antes de redibujar, para reabrirlas
+  // después — así editar un campo no colapsa todo el árbol.
+  const abiertasAntes = new Set();
+  cont.querySelectorAll('details[open]').forEach(d => {
+    if(d.dataset.path) abiertasAntes.add(d.dataset.path);
+  });
+
   const estructura = agruparHallazgosPorSegmento();
   const sectores = Object.keys(estructura).sort();
 
   cont.innerHTML = sectores.map(sector => {
     const hSector = recolectarHallazgos(estructura[sector]);
     const deptos = Object.keys(estructura[sector]).sort();
-    return `<details class="seg-sector">
+    const pathSector = sector;
+    return `<details class="seg-sector" data-path="${escHtml(pathSector)}">
       <summary>${escHtml(sector)} <span class="seg-count">(${hSector.length} hallazgo${hSector.length!==1?'s':''})</span> ${badgesEstado(hSector)} ${badgesVerificacion(hSector)}</summary>
       <div class="seg-body">
         ${deptos.map(depto => {
           const hDepto = recolectarHallazgos(estructura[sector][depto]);
           const tipos = ordenarTipos(Object.keys(estructura[sector][depto]));
-          return `<details class="seg-depto">
+          const pathDepto = pathSector + '|||' + depto;
+          return `<details class="seg-depto" data-path="${escHtml(pathDepto)}">
             <summary>${escHtml(depto)} <span class="seg-count">(${hDepto.length} hallazgo${hDepto.length!==1?'s':''})</span> ${badgesEstado(hDepto)} ${badgesVerificacion(hDepto)}</summary>
             <div class="seg-body">
               ${tipos.map(tipo => {
                 const hTipo = recolectarHallazgos(estructura[sector][depto][tipo]);
                 const respDirs = Object.keys(estructura[sector][depto][tipo]).sort();
-                return `<details class="seg-tipo">
+                const pathTipo = pathDepto + '|||' + tipo;
+                return `<details class="seg-tipo" data-path="${escHtml(pathTipo)}">
                   <summary>${escHtml(tipo)} <span class="seg-count">(${hTipo.length} hallazgo${hTipo.length!==1?'s':''})</span> ${badgesEstado(hTipo)} ${badgesVerificacion(hTipo)}</summary>
                   <div class="seg-body">
                     ${respDirs.map(rd => {
                       const lista = estructura[sector][depto][tipo][rd];
-                      return `<details class="seg-respdir">
+                      const pathRd = pathTipo + '|||' + rd;
+                      return `<details class="seg-respdir" data-path="${escHtml(pathRd)}">
                         <summary>${escHtml(rd)} <span class="seg-count">(${lista.length})</span> ${badgesEstado(lista)} ${badgesVerificacion(lista)}</summary>
                         ${tablaHallazgosSegmento(lista)}
                       </details>`;
@@ -4399,6 +4410,11 @@ function renderTablaHallazgosAcciones(){
       </div>
     </details>`;
   }).join('');
+
+  // Reabrir las ramas que estaban abiertas antes de este redibujado
+  cont.querySelectorAll('details[data-path]').forEach(d => {
+    if(abiertasAntes.has(d.dataset.path)) d.open = true;
+  });
 }
 
 function abrirVinculoHallazgo(codigo){
@@ -4550,6 +4566,7 @@ async function saveFieldAccionHallazgo(numeroAccion, campo, valor, el){
     const p = new URLSearchParams({ action:'updateAccionHallazgo', numeroAccion, campo, valor });
     await fetch(API_URL() + '?' + p.toString());
     toast('✓ Guardado');
+    renderTablaHallazgosAcciones(); // refresca los indicadores (%, badges) de todo el árbol
   }catch(e){
     toast('⚠ No se pudo guardar', 3000);
   }
