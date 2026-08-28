@@ -352,22 +352,29 @@ tbody tr:hover td{background:var(--surface2)}
 .accion-nueva-fila .quitar-fila{position:absolute;top:8px;right:8px;font-size:10px;padding:2px 7px;background:var(--red-bg);color:var(--red-text);border:none}
 .accion-nueva-fila-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
 
-/* Segmentación Sector → Resp. Directo → Resp. Implementación (Hallazgos) */
-.seg-sector,.seg-respdir,.seg-respimpl{border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;background:var(--surface)}
+/* Segmentación Sector → Departamento → Tipo → Resp. Directo (Hallazgos) */
+.seg-sector,.seg-depto,.seg-tipo,.seg-respdir{border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;background:var(--surface)}
 .seg-sector{border-left:3px solid var(--red)}
+.seg-depto{border-left:3px solid var(--amber);margin:8px 0 8px 14px}
+.seg-tipo{border-left:3px solid var(--green);margin:8px 0 8px 14px}
 .seg-respdir{border-left:3px solid var(--blue);margin:8px 0 8px 14px}
-.seg-respimpl{border-left:3px solid var(--purple);margin:8px 0 8px 14px}
-.seg-sector>summary,.seg-respdir>summary,.seg-respimpl>summary{cursor:pointer;padding:9px 12px;font-size:12px;font-weight:700;color:var(--text);list-style:none;display:flex;align-items:center;gap:6px}
+.seg-sector>summary,.seg-depto>summary,.seg-tipo>summary,.seg-respdir>summary{cursor:pointer;padding:9px 12px;font-size:12px;font-weight:700;color:var(--text);list-style:none;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .seg-sector>summary::before{content:"📁";font-size:11px}
+.seg-depto>summary::before{content:"📂";font-size:11px}
+.seg-tipo>summary::before{content:"🏷️";font-size:11px}
 .seg-respdir>summary::before{content:"👤";font-size:11px}
-.seg-respimpl>summary::before{content:"🔧";font-size:11px}
-.seg-sector>summary::-webkit-details-marker,.seg-respdir>summary::-webkit-details-marker,.seg-respimpl>summary::-webkit-details-marker{display:none}
+.seg-sector>summary::-webkit-details-marker,.seg-depto>summary::-webkit-details-marker,.seg-tipo>summary::-webkit-details-marker,.seg-respdir>summary::-webkit-details-marker{display:none}
 .seg-count{font-weight:400;color:var(--text3);font-size:11px}
 .seg-body{padding:0 12px 10px}
 .seg-tabla{width:100%;border-collapse:collapse;margin-top:4px}
 .seg-tabla th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--text3);padding:6px 8px;border-bottom:1px solid var(--border)}
 .seg-tabla td{padding:6px 8px;border-bottom:1px solid var(--border);font-size:11px}
 .seg-tabla tr:last-child td{border-bottom:none}
+.seg-badge{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:2px;white-space:nowrap}
+.seg-badge-sinacc{background:var(--border);color:var(--text3)}
+.seg-badge-pend{background:var(--red-bg);color:var(--red-text)}
+.seg-badge-curso{background:var(--amber-bg);color:var(--amber-text)}
+.seg-badge-fin{background:var(--green-bg);color:var(--green-text)}
 
 .ssoma-filtros .fgrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .ssoma-filtros input[type=date]{width:100%;font-size:11px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);outline:none;cursor:pointer}
@@ -651,7 +658,7 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
     </div>
     <div class="tbl-card">
-      <div class="tbl-hdr"><div class="ct">Hallazgos — Departamento → Responsable Directo → Responsable Implementación</div></div>
+      <div class="tbl-hdr"><div class="ct">Hallazgos — Sector → Departamento → Tipo → Responsable Directo</div></div>
       <div id="hacc-segmentado" style="padding:12px">Cargando...</div>
     </div>
   </div>
@@ -4194,57 +4201,104 @@ function accionesDeHallazgo(codigoLimpio){
 // "Sin acción cargada" dentro de su Responsable Directo. Si tiene varias
 // acciones con distintos responsables de implementación, aparece una vez
 // por cada uno (es correcto: está "bajo la órbita" de cada responsable).
-// Separa una celda de departamento que puede tener más de uno cargado
-// (salto de línea o coma entre ellos) en una lista de departamentos.
-function separarDepartamentos(texto){
+// Separa una celda que puede tener más de un valor cargado (salto de línea
+// o coma entre ellos) en una lista. Se usa para Sector y Departamento.
+function separarValoresMulti(texto, etiquetaVacio){
   const partes = String(texto||'').split(/\r\n|\r|\n|,/).map(p=>p.trim()).filter(Boolean);
-  return partes.length ? partes : ['Sin departamento'];
+  return partes.length ? partes : [etiquetaVacio];
 }
 
+// Orden fijo para "Tipo hallazgo": NC primero, después Observación, después
+// OM — el resto (Fortaleza, Integral, etc.) va después, alfabético.
+const ORDEN_TIPO_HALLAZGO = ['No Conformidad', 'Observación', 'Oportunidad de Mejora'];
+function ordenarTipos(tipos){
+  return tipos.sort((a,b) => {
+    const ia = ORDEN_TIPO_HALLAZGO.indexOf(a), ib = ORDEN_TIPO_HALLAZGO.indexOf(b);
+    if(ia===-1 && ib===-1) return a.localeCompare(b);
+    if(ia===-1) return 1;
+    if(ib===-1) return -1;
+    return ia-ib;
+  });
+}
+
+// { sector: { depto: { tipo: { respDir: [hallazgos] } } } }
 function agruparHallazgosPorSegmento(){
   const datos = (filtrados.length ? filtrados : rawData);
   const estructura = {};
 
   datos.forEach(h => {
-    const deptos = separarDepartamentos(h.depto);
+    const sectores = separarValoresMulti(h.sector, 'Sin sector');
+    const deptos = separarValoresMulti(h.depto, 'Sin departamento');
+    const tipo = h.tipoHallazgo || 'Sin tipo';
     const respDir = h.respDir || 'Sin responsable directo';
-    const codigoLimpio = codigoLimpioDe(h);
-    const acciones = accionesDeHallazgo(codigoLimpio);
 
-    deptos.forEach(depto => {
-      if(!estructura[depto]) estructura[depto] = {};
-      if(!estructura[depto][respDir]) estructura[depto][respDir] = {};
-
-      if(!acciones.length){
-        const key = 'Sin acción cargada';
-        (estructura[depto][respDir][key] ||= []).push(h);
-      } else {
-        const implsUnicos = [...new Set(acciones.map(a => a.respImpl || 'Sin responsable de implementación'))];
-        implsUnicos.forEach(impl => {
-          (estructura[depto][respDir][impl] ||= []).push(h);
-        });
-      }
+    sectores.forEach(sector => {
+      if(!estructura[sector]) estructura[sector] = {};
+      deptos.forEach(depto => {
+        if(!estructura[sector][depto]) estructura[sector][depto] = {};
+        if(!estructura[sector][depto][tipo]) estructura[sector][depto][tipo] = {};
+        (estructura[sector][depto][tipo][respDir] ||= []).push(h);
+      });
     });
   });
 
   return estructura;
 }
 
+// Recolecta todos los hallazgos (sin duplicar de más) bajo cualquier rama
+// de la estructura, para poder calcular los indicadores de estado.
+function recolectarHallazgos(rama){
+  let lista = [];
+  Object.values(rama).forEach(v => {
+    if(Array.isArray(v)) lista = lista.concat(v);
+    else lista = lista.concat(recolectarHallazgos(v));
+  });
+  return lista;
+}
+
+// Estado de UN hallazgo, resumido a partir del estado de sus acciones:
+// "SIN ACCIÓN" si no tiene ninguna cargada, "FINALIZADO" si todas lo están,
+// "EN CURSO" si alguna está en curso, "PENDIENTE" en cualquier otro caso.
+function estadoResumenHallazgo(h){
+  const codigoLimpio = codigoLimpioDe(h);
+  const acciones = accionesDeHallazgo(codigoLimpio);
+  if(!acciones.length) return 'SIN ACCIÓN';
+  const estados = acciones.map(a => (a.estAcc||'PENDIENTE').toUpperCase());
+  if(estados.every(e => e==='FINALIZADO')) return 'FINALIZADO';
+  if(estados.some(e => e==='EN CURSO')) return 'EN CURSO';
+  return 'PENDIENTE';
+}
+
+// Arma los indicadores de estado (badges) para una lista de hallazgos.
+function badgesEstado(listaHallazgos){
+  const conteo = {'SIN ACCIÓN':0, 'PENDIENTE':0, 'EN CURSO':0, 'FINALIZADO':0};
+  listaHallazgos.forEach(h => { conteo[estadoResumenHallazgo(h)]++; });
+  const partes = [];
+  if(conteo['SIN ACCIÓN'])  partes.push(`<span class="seg-badge seg-badge-sinacc">⚪ ${conteo['SIN ACCIÓN']}</span>`);
+  if(conteo['PENDIENTE'])   partes.push(`<span class="seg-badge seg-badge-pend">🔴 ${conteo['PENDIENTE']}</span>`);
+  if(conteo['EN CURSO'])    partes.push(`<span class="seg-badge seg-badge-curso">🟡 ${conteo['EN CURSO']}</span>`);
+  if(conteo['FINALIZADO'])  partes.push(`<span class="seg-badge seg-badge-fin">🟢 ${conteo['FINALIZADO']}</span>`);
+  return partes.join('');
+}
+
 function tablaHallazgosSegmento(lista){
   return `<div class="seg-body"><table class="seg-tabla">
-    <thead><tr><th>Código único</th><th>Fecha</th><th>Empresa</th><th>Tipo</th><th>Descripción</th><th>Acciones</th></tr></thead>
+    <thead><tr><th>Código único</th><th>Fecha</th><th>Empresa</th><th>Descripción</th><th>Resp. Implementación</th><th>Estado</th><th>Acciones</th></tr></thead>
     <tbody>
       ${lista.map(r => {
         const codigo = String(r.codigoUnico||'').trim();
         const codigoLimpio = codigoLimpioDe(r);
-        const nAcc = accionesDeHallazgo(codigoLimpio).length;
+        const acciones = accionesDeHallazgo(codigoLimpio);
+        const nAcc = acciones.length;
+        const respImplUnicos = [...new Set(acciones.map(a => a.respImpl).filter(Boolean))];
         const btn = `<button class="vinculo-link-btn" onclick="abrirVinculoHallazgo('${codigo.replace(/'/g,"\\'")}')">${nAcc ? nAcc+' acc. →' : '+ Agregar'}</button>`;
         return `<tr>
           <td><strong>${codigo||'—'}</strong></td>
           <td style="white-space:nowrap">${fmtDate(r.fechaAud)}</td>
           <td>${r.empresa||'—'}</td>
-          <td>${r.tipoHallazgo||'—'}</td>
-          <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.desc)}">${r.desc||'—'}</td>
+          <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.desc)}">${r.desc||'—'}</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(respImplUnicos.join(', '))}">${respImplUnicos.length ? escHtml(respImplUnicos.join(', ')) : '—'}</td>
+          <td>${badgesEstado([r])}</td>
           <td>${btn}</td>
         </tr>`;
       }).join('')}
@@ -4259,25 +4313,34 @@ function renderTablaHallazgosAcciones(){
   if(!datos.length){ cont.innerHTML = '<div class="empty">Sin hallazgos cargados</div>'; return; }
 
   const estructura = agruparHallazgosPorSegmento();
-  const deptos = Object.keys(estructura).sort();
+  const sectores = Object.keys(estructura).sort();
 
-  cont.innerHTML = deptos.map(depto => {
-    const respDirs = Object.keys(estructura[depto]).sort();
-    const totalDepto = respDirs.reduce((s,rd) => s + Object.values(estructura[depto][rd]).reduce((s2,arr)=>s2+arr.length,0), 0);
+  cont.innerHTML = sectores.map(sector => {
+    const hSector = recolectarHallazgos(estructura[sector]);
+    const deptos = Object.keys(estructura[sector]).sort();
     return `<details class="seg-sector">
-      <summary>${escHtml(depto)} <span class="seg-count">(${totalDepto} hallazgo${totalDepto!==1?'s':''})</span></summary>
+      <summary>${escHtml(sector)} <span class="seg-count">(${hSector.length} hallazgo${hSector.length!==1?'s':''})</span> ${badgesEstado(hSector)}</summary>
       <div class="seg-body">
-        ${respDirs.map(rd => {
-          const impls = Object.keys(estructura[depto][rd]).sort();
-          const totalRd = impls.reduce((s,im) => s + estructura[depto][rd][im].length, 0);
-          return `<details class="seg-respdir">
-            <summary>${escHtml(rd)} <span class="seg-count">(${totalRd} hallazgo${totalRd!==1?'s':''})</span></summary>
+        ${deptos.map(depto => {
+          const hDepto = recolectarHallazgos(estructura[sector][depto]);
+          const tipos = ordenarTipos(Object.keys(estructura[sector][depto]));
+          return `<details class="seg-depto">
+            <summary>${escHtml(depto)} <span class="seg-count">(${hDepto.length} hallazgo${hDepto.length!==1?'s':''})</span> ${badgesEstado(hDepto)}</summary>
             <div class="seg-body">
-              ${impls.map(impl => {
-                const lista = estructura[depto][rd][impl];
-                return `<details class="seg-respimpl">
-                  <summary>${escHtml(impl)} <span class="seg-count">(${lista.length})</span></summary>
-                  ${tablaHallazgosSegmento(lista)}
+              ${tipos.map(tipo => {
+                const hTipo = recolectarHallazgos(estructura[sector][depto][tipo]);
+                const respDirs = Object.keys(estructura[sector][depto][tipo]).sort();
+                return `<details class="seg-tipo">
+                  <summary>${escHtml(tipo)} <span class="seg-count">(${hTipo.length} hallazgo${hTipo.length!==1?'s':''})</span> ${badgesEstado(hTipo)}</summary>
+                  <div class="seg-body">
+                    ${respDirs.map(rd => {
+                      const lista = estructura[sector][depto][tipo][rd];
+                      return `<details class="seg-respdir">
+                        <summary>${escHtml(rd)} <span class="seg-count">(${lista.length})</span> ${badgesEstado(lista)}</summary>
+                        ${tablaHallazgosSegmento(lista)}
+                      </details>`;
+                    }).join('')}
+                  </div>
                 </details>`;
               }).join('')}
             </div>
