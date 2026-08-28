@@ -3978,8 +3978,10 @@ async function refrescarAdjuntosSSOMA(){
 
 // Sube todos los archivos de un <input type="file" multiple>, espera a que
 // Apps Script termine de escribirlos en el Sheet, refresca la lista y
-// vuelve a abrir el modal del evento para que se vean los links nuevos.
-async function subirArchivosInputSSOMA(inputId, tipo, referencia){
+// ejecuta onListo() al final (por defecto reabre el modal de SSOMA, para no
+// tocar el comportamiento ya usado en Accidentes; otros módulos pueden
+// pasar su propio callback de reapertura).
+async function subirArchivosInputSSOMA(inputId, tipo, referencia, onListo){
   const input = document.getElementById(inputId);
   if(!input || !input.files || !input.files.length){ toast('⚠ Elegí al menos un archivo'); return; }
   const archivos = Array.from(input.files);
@@ -4001,7 +4003,8 @@ async function subirArchivosInputSSOMA(inputId, tipo, referencia){
     const cantidadAhora = (adjuntosPorReferencia[String(referencia)] || []).length;
     if(cantidadAhora > cantidadAntes) break;
   }
-  if(nuevaAccionSerialActivo) abrirVinculo(nuevaAccionSerialActivo);
+  if(typeof onListo === 'function') onListo();
+  else if(nuevaAccionSerialActivo) abrirVinculo(nuevaAccionSerialActivo);
 }
 
 function listaAdjuntosHtml(referencia){
@@ -4173,7 +4176,8 @@ async function cargarAccionesHallazgos(){
   try{
     const [resAcc, resMapa] = await Promise.all([
       fetch(API_URL() + '?action=getAccionesHallazgos'),
-      fetch(API_URL() + '?action=getMapaCodigosHallazgos')
+      fetch(API_URL() + '?action=getMapaCodigosHallazgos'),
+      refrescarAdjuntosSSOMA() // misma hoja/mecanismo genérico de adjuntos que ya usa Accidentes
     ]);
     const json = await resAcc.json();
     const lista = await resMapa.json().catch(()=>[]);
@@ -4309,7 +4313,12 @@ function estadoVerifResumenHallazgo(h){
   const acciones = accionesDeHallazgo(codigoLimpio);
   const finalizadas = acciones.filter(a => (a.estAcc||'').toUpperCase() === 'FINALIZADO');
   if(!finalizadas.length) return 'N/A';
-  const verificadas = finalizadas.filter(a => (a.estVerif||'').trim() === 'Verifica');
+  // "Verifica" y "Verifica con Observaciones" cuentan las dos como verificado
+  // — en ambas hubo verificación real, la segunda solo trae notas adicionales.
+  const verificadas = finalizadas.filter(a => {
+    const v = (a.estVerif||'').trim();
+    return v === 'Verifica' || v === 'Verifica con Observaciones';
+  });
   return verificadas.length === finalizadas.length ? 'VERIFICADO' : 'A VERIFICAR';
 }
 
@@ -4423,6 +4432,14 @@ function abrirVinculoHallazgo(codigo){
     <div class="vinculo-row"><label>Sector</label><span>${hallazgo.sector||'—'}</span></div>
     <div class="vinculo-row"><label>Resp. Directo</label><span>${hallazgo.respDir||'—'}</span></div>
     <div class="vinculo-row" style="align-items:flex-start"><label>Descripción</label><span style="font-size:10px;line-height:1.4;font-weight:400">${escHtml(hallazgo.desc)}</span></div>
+
+    <div class="vinculo-side-title" style="margin-top:14px">Informe de auditoría (IRAM / Cliente)</div>
+    <div style="margin-bottom:8px">${listaAdjuntosHtml(codigo)}</div>
+    <input type="file" id="vh-informeauditoria-files" multiple style="width:100%;font-size:10px">
+    <button type="button" style="margin-top:6px;width:100%;justify-content:center" onclick="subirArchivosInputSSOMA('vh-informeauditoria-files','INFORME_AUDITORIA_HALLAZGO','${codigo.replace(/'/g,"\\'")}',()=>abrirVinculoHallazgo('${codigo.replace(/'/g,"\\'")}'))">
+      <i class="ti ti-upload"></i> Subir archivo(s)
+    </button>
+
     <div class="vinculo-side-title" style="margin-top:14px">Corrección (inmediata)</div>
     <div class="vinculo-row" style="align-items:flex-start"><label>Corrección</label><span style="font-size:10px;line-height:1.4;font-weight:400">${escHtml(hallazgo.correccion)||'—'}</span></div>
     <div class="vinculo-row"><label>Resp. corrección</label><span>${hallazgo.respCorr||'—'}</span></div>
@@ -4480,6 +4497,7 @@ function vinculoAccionHallazgoCard(a){
     ? `<select class="edit-date" style="width:100%" onchange="saveFieldAccionHallazgo('${a.numeroAccion}','estVerif',this.value,this)">
          <option value="">Sin verificar</option>
          <option value="Verifica" ${a.estVerif==='Verifica'?'selected':''}>Verifica</option>
+         <option value="Verifica con Observaciones" ${a.estVerif==='Verifica con Observaciones'?'selected':''}>Verifica con Observaciones</option>
          <option value="No Verifica" ${a.estVerif==='No Verifica'?'selected':''}>No Verifica</option>
        </select>`
     : `<span>${a.estVerif||'Sin verificar'}</span>`;
@@ -4508,6 +4526,16 @@ function vinculoAccionHallazgoCard(a){
     <div style="margin-top:8px">
       <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">Observaciones</div>
       ${obsVerifInput}
+    </div>
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Evidencia de cierre</div>
+      ${listaAdjuntosHtml(a.numeroAccion)}
+      <div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap">
+        <input type="file" id="hacc-files-${a.numeroAccion.replace(/[^a-zA-Z0-9]/g,'_')}" multiple style="font-size:9px;max-width:140px">
+        <button type="button" style="font-size:9px;padding:4px 8px" onclick="subirArchivosInputSSOMA('hacc-files-${a.numeroAccion.replace(/[^a-zA-Z0-9]/g,'_')}','EVIDENCIA_CIERRE_HALLAZGO','${a.numeroAccion}',()=>abrirVinculoHallazgo('${hAccionCodigoActivo.replace(/'/g,"\\'")}'))">
+          <i class="ti ti-upload"></i> Subir
+        </button>
+      </div>
     </div>
   </div>`;
 }
@@ -4626,6 +4654,15 @@ function renderShellFormNuevaAccionHallazgo(){
           <option value="">—</option>
           ${hallazgosOptCriticidad.map(v=>`<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('')}
         </select>
+      </div>
+
+      <div class="usr-field">
+        <label>Informe de causa raíz (opcional, podés subir varios)</label>
+        <div style="margin-bottom:6px">${listaAdjuntosHtml(hAccionSerialActivo)}</div>
+        <input type="file" id="hf-informecausaraiz-files" multiple>
+        <button type="button" style="margin-top:6px" onclick="subirArchivosInputSSOMA('hf-informecausaraiz-files','INFORME_CAUSARAIZ_HALLAZGO','${hAccionSerialActivo}',()=>abrirVinculoHallazgo('${hAccionCodigoActivo.replace(/'/g,"\\'")}'))">
+          <i class="ti ti-upload"></i> Subir archivo(s)
+        </button>
       </div>
 
       <div class="vinculo-side-title" style="margin-top:14px">Acciones correctivas — podés cargar más de una</div>
