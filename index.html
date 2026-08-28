@@ -745,6 +745,28 @@ tbody tr:hover td{background:var(--surface2)}
     <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--red);display:inline-block">Estado de cierre por técnico generante</div>
     <div class="tecnico-grid" id="ssoma-tecnico-grid" style="margin-bottom:16px"></div>
 
+    <div class="tbl-card" style="margin-bottom:16px">
+      <div class="tbl-hdr"><div class="ct">Eventos — Generante → Centro de Costo → Involucrado</div></div>
+      <div style="padding:12px 12px 0">
+        <div class="seg-leyenda">
+          <strong>Indicadores SSOMA:</strong>
+          <span id="ssoma-arbol-indicadores-totales">Cargando...</span>
+        </div>
+        <div class="seg-leyenda-explicacion">
+          <strong>Cómo se calcula:</strong>
+          <span class="seg-badge seg-badge-fin" style="font-weight:800">XX% cumplido</span> = eventos con TODAS sus acciones finalizadas
+          <span class="seg-badge seg-badge-sinacc">⚪ Sin acción</span>
+          <span class="seg-badge seg-badge-pend">🔴 Pendiente</span>
+          <span class="seg-badge seg-badge-curso">🟡 En curso</span>
+          <span class="seg-badge seg-badge-fin">🟢 Finalizado</span>
+          <span class="seg-badge seg-badge-averificar">🔎 A verificar</span>
+          <span class="seg-badge seg-badge-verificadoobs">📝 Verificado c/obs.</span>
+          <span class="seg-badge seg-badge-verificado">✔️ Verificado</span>
+        </div>
+      </div>
+      <div id="ssoma-arbol" style="padding:0 12px 12px">Cargando...</div>
+    </div>
+
     <div class="tbl-card">
       <div class="tbl-hdr">
         <div class="ct">Registro de eventos</div>
@@ -3517,6 +3539,7 @@ function aplicarFiltrosSSOMA(){
   renderSSOMAKpis(filtradosSSOMA);
   renderTecnicoGenerante(filtradosSSOMA);
   renderTablaSSOMA(filtradosSSOMA);
+  renderArbolAccidentes();
 }
 
 function limpiarFiltrosSSOMA(){
@@ -3626,6 +3649,156 @@ function escHtml(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// ══════════ ÁRBOL SSOMA — Generante → Centro de Costo → Involucrado ══════════
+
+// Estado de UN evento, resumido a partir del estado de sus acciones (mismo
+// criterio que Hallazgos): "SIN ACCIÓN" si no tiene ninguna, "FINALIZADO" si
+// todas lo están, "EN CURSO" si alguna está en curso, "PENDIENTE" el resto.
+function estadoResumenEvento(r){
+  const acciones = accionesPorPreliminar[String(r.serial)] || [];
+  if(!acciones.length) return 'SIN ACCIÓN';
+  const estados = acciones.map(a => (a.estAcc||'PENDIENTE').toUpperCase());
+  if(estados.every(e => e==='FINALIZADO')) return 'FINALIZADO';
+  if(estados.some(e => e==='EN CURSO')) return 'EN CURSO';
+  return 'PENDIENTE';
+}
+
+// Estado de verificación de UN evento, resumido (mismo criterio que Hallazgos).
+function estadoVerifResumenEvento(r){
+  const acciones = accionesPorPreliminar[String(r.serial)] || [];
+  const finalizadas = acciones.filter(a => (a.estAcc||'').toUpperCase() === 'FINALIZADO');
+  if(!finalizadas.length) return 'N/A';
+  const verifs = finalizadas.map(a => normEstVerifAccion(a.estVerif));
+  const todasVerificadas = verifs.every(v => v === 'VERIFICA' || v === 'VERIFICA CON OBSERVACIONES');
+  if(!todasVerificadas) return 'A VERIFICAR';
+  return verifs.some(v => v === 'VERIFICA CON OBSERVACIONES') ? 'VERIFICADO CON OBSERVACIONES' : 'VERIFICADO';
+}
+
+// Los 8 indicadores en columnas fijas, igual criterio visual que Hallazgos.
+// SSOMA no tiene "Oportunidad de Mejora", así que el % de cumplido se
+// calcula sobre el total, sin exclusiones.
+function badgesFilaSSOMA(listaEventos){
+  const conteo = {'SIN ACCIÓN':0, 'PENDIENTE':0, 'EN CURSO':0, 'FINALIZADO':0};
+  listaEventos.forEach(r => { conteo[estadoResumenEvento(r)]++; });
+  const total = listaEventos.length;
+  const pct = total ? Math.round(conteo['FINALIZADO'] / total * 100) : 0;
+  const pctClase = pct>=80 ? 'seg-badge-fin' : pct>=50 ? 'seg-badge-curso' : 'seg-badge-pend';
+
+  const conteoV = {'N/A':0, 'A VERIFICAR':0, 'VERIFICADO':0, 'VERIFICADO CON OBSERVACIONES':0};
+  listaEventos.forEach(r => { conteoV[estadoVerifResumenEvento(r)]++; });
+
+  const col = (clase, texto, activo) =>
+    `<span class="seg-badge-col ${clase}${activo?'':' seg-badge-col-vacio'}">${texto}</span>`;
+
+  return [
+    col(pctClase, `${pct}%`, true),
+    col('seg-badge-sinacc', `⚪ ${conteo['SIN ACCIÓN']}`, conteo['SIN ACCIÓN']>0),
+    col('seg-badge-pend', `🔴 ${conteo['PENDIENTE']}`, conteo['PENDIENTE']>0),
+    col('seg-badge-curso', `🟡 ${conteo['EN CURSO']}`, conteo['EN CURSO']>0),
+    col('seg-badge-fin', `🟢 ${conteo['FINALIZADO']}`, conteo['FINALIZADO']>0),
+    col('seg-badge-averificar', `🔎 ${conteoV['A VERIFICAR']}`, conteoV['A VERIFICAR']>0),
+    col('seg-badge-verificadoobs', `📝 ${conteoV['VERIFICADO CON OBSERVACIONES']}`, conteoV['VERIFICADO CON OBSERVACIONES']>0),
+    col('seg-badge-verificado', `✔️ ${conteoV['VERIFICADO']}`, conteoV['VERIFICADO']>0),
+  ].join('');
+}
+
+function recolectarEventos(rama){
+  let lista = [];
+  Object.values(rama).forEach(v => {
+    if(Array.isArray(v)) lista = lista.concat(v);
+    else lista = lista.concat(recolectarEventos(v));
+  });
+  return lista;
+}
+
+// { generante: { centroCosto: { involucrado: [eventos] } } }
+function agruparAccidentesPorSegmento(){
+  const datos = (filtradosSSOMA.length ? filtradosSSOMA : rawSSOMA);
+  const estructura = {};
+  datos.forEach(r => {
+    const gen = r.generante || 'Sin generante';
+    const cc = r.unNegocio || 'Sin centro de costo';
+    const inv = r.involucrado || 'Sin involucrado';
+    if(!estructura[gen]) estructura[gen] = {};
+    if(!estructura[gen][cc]) estructura[gen][cc] = {};
+    (estructura[gen][cc][inv] ||= []).push(r);
+  });
+  return estructura;
+}
+
+// Tabla de detalle de un grupo — no repite Generante/Centro de
+// Costo/Involucrado porque ya están mostrados como título de la rama.
+function tablaAccidentesSegmento(lista){
+  return `<div class="seg-body"><table class="seg-tabla">
+    <thead><tr><th>N°</th><th>Fecha</th><th>Tipo</th><th>Severidad</th><th>Descripción</th><th>Estado</th><th>Días perd.</th><th>Acciones</th></tr></thead>
+    <tbody>
+      ${lista.map(r => {
+        const nAcc = (accionesPorPreliminar[String(r.serial)] || []).length;
+        const btn = `<button class="vinculo-link-btn" onclick="abrirVinculo('${String(r.serial).replace(/'/g,"\\'")}')">${nAcc ? nAcc+' acc. →' : '+ Agregar'}</button>`;
+        return `<tr>
+          <td><strong>${r.serial}</strong></td>
+          <td style="white-space:nowrap">${fmtDate(r.fecha)}</td>
+          <td>${ssomaPillTipo(r.tipo)}</td>
+          <td>${r.severidad||'—'}</td>
+          <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.descripcion)}">${r.descripcion||'—'}</td>
+          <td>${ssomaPillEstadoFinal(r.estadoFinal)}</td>
+          <td style="text-align:center;font-weight:700;color:${parseInt(r.diasPerdidos)>0?'var(--red)':'var(--text3)'}">${r.diasPerdidos||0}</td>
+          <td>${btn}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function renderArbolAccidentes(){
+  const cont = document.getElementById('ssoma-arbol');
+  if(!cont) return;
+  const datos = (filtradosSSOMA.length ? filtradosSSOMA : rawSSOMA);
+  if(!datos.length){ cont.innerHTML = '<div class="empty">Sin eventos cargados</div>'; return; }
+
+  const indTotales = document.getElementById('ssoma-arbol-indicadores-totales');
+  if(indTotales) indTotales.innerHTML = `(${datos.length} evento${datos.length!==1?'s':''}) ${badgesFilaSSOMA(datos)}`;
+
+  const abiertasAntes = new Set();
+  cont.querySelectorAll('details[open]').forEach(d => { if(d.dataset.path) abiertasAntes.add(d.dataset.path); });
+
+  const estructura = agruparAccidentesPorSegmento();
+  const generantes = Object.keys(estructura).sort();
+
+  cont.innerHTML = generantes.map(gen => {
+    const evGen = recolectarEventos(estructura[gen]);
+    const ccs = Object.keys(estructura[gen]).sort();
+    const pathGen = gen;
+    return `<details class="seg-sector" data-path="${escHtml(pathGen)}">
+      <summary><span class="seg-summary-label">${escHtml(gen)} <span class="seg-count">(${evGen.length} evento${evGen.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesFilaSSOMA(evGen)}</span></summary>
+      <div class="seg-body">
+        ${ccs.map(cc => {
+          const evCc = recolectarEventos(estructura[gen][cc]);
+          const invs = Object.keys(estructura[gen][cc]).sort();
+          const pathCc = pathGen + '|||' + cc;
+          return `<details class="seg-depto" data-path="${escHtml(pathCc)}">
+            <summary><span class="seg-summary-label">${escHtml(cc)} <span class="seg-count">(${evCc.length} evento${evCc.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesFilaSSOMA(evCc)}</span></summary>
+            <div class="seg-body">
+              ${invs.map(inv => {
+                const lista = estructura[gen][cc][inv];
+                const pathInv = pathCc + '|||' + inv;
+                return `<details class="seg-tipo" data-path="${escHtml(pathInv)}">
+                  <summary><span class="seg-summary-label">${escHtml(inv)} <span class="seg-count">(${lista.length})</span></span><span class="seg-summary-badges">${badgesFilaSSOMA(lista)}</span></summary>
+                  ${tablaAccidentesSegmento(lista)}
+                </details>`;
+              }).join('')}
+            </div>
+          </details>`;
+        }).join('')}
+      </div>
+    </details>`;
+  }).join('');
+
+  cont.querySelectorAll('details[data-path]').forEach(d => {
+    if(abiertasAntes.has(d.dataset.path)) d.open = true;
+  });
+}
+
 function renderTablaSSOMA(data){
   const tbody = document.getElementById('ssoma-tbody');
   if(!data.length){ tbody.innerHTML = '<tr><td colspan="14" class="empty">Sin registros</td></tr>'; return; }
@@ -3690,6 +3863,7 @@ async function saveEventoSSOMA(serial, campo, valor, el){
     toast('✓ Guardado');
     renderSSOMAKpis(filtradosSSOMA);
     renderTecnicoGenerante(filtradosSSOMA);
+    renderArbolAccidentes();
   }catch(e){
     toast('⚠ No se pudo guardar', 3000);
   }
@@ -3936,6 +4110,7 @@ async function guardarAccionesNuevas(){
   nuevaAccionFormAbierto = false;
   abrirVinculo(serial);
   renderTablaSSOMA(filtradosSSOMA);
+  renderArbolAccidentes();
 }
 
 // ── ADJUNTOS SSOMA — subida de archivos (Informe Final / Evidencia de acciones) ──
@@ -4101,6 +4276,7 @@ async function saveFieldSSOMA(codigoAccion, campo, valor, el){
     toast('✓ Guardado');
     renderSSOMAKpis(filtradosSSOMA);
     renderTecnicoGenerante(filtradosSSOMA);
+    renderArbolAccidentes();
   }catch(e){
     toast('⚠ No se pudo guardar', 3000);
   }
@@ -4125,6 +4301,7 @@ async function eliminarAccionSSOMA(codigoAccion, numPreliminar){
   toast('✓ Acción eliminada');
   if(nuevaAccionSerialActivo) abrirVinculo(nuevaAccionSerialActivo);
   renderTablaSSOMA(filtradosSSOMA);
+  renderArbolAccidentes();
 }
 
 function exportarSSOMAExcel(){
