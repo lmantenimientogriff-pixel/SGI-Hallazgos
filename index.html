@@ -490,6 +490,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div class="fi"><label>Empresa</label><div class="ms-wrapper" id="ms-empresa"></div></div>
       <div class="fi"><label>Unidad de negocio</label><div class="ms-wrapper" id="ms-un"></div></div>
       <div class="fi"><label>Departamento</label><div class="ms-wrapper" id="ms-depto"></div></div>
+      <div class="fi"><label>Sector</label><div class="ms-wrapper" id="ms-sector"></div></div>
       <div class="fi"><label>Tipo hallazgo</label><div class="ms-wrapper" id="ms-tipo"></div></div>
       <div class="fi"><label>Origen</label><div class="ms-wrapper" id="ms-origen"></div></div>
       <div class="fi"><label>Estado corrección</label><div class="ms-wrapper" id="ms-estcorr"></div></div>
@@ -1002,7 +1003,7 @@ let SESSION = null; // {u, nombre, rol}
 let rawData=[],filtrados=[],charts={},sortCol='serialNumber',sortAsc=false;
 
 // selecciones multi-select por filtro
-const SEL={empresa:new Set(),un:new Set(),depto:new Set(),tipo:new Set(),origen:new Set(),estcorr:new Set(),estacc:new Set(),crit:new Set(),resp:new Set(),venc:new Set(),respcorr:new Set(),respacc:new Set(),codigo:new Set()};
+const SEL={empresa:new Set(),un:new Set(),depto:new Set(),sector:new Set(),tipo:new Set(),origen:new Set(),estcorr:new Set(),estacc:new Set(),crit:new Set(),resp:new Set(),venc:new Set(),respcorr:new Set(),respacc:new Set(),codigo:new Set()};
 
 // opciones estáticas para vencimiento
 const VENC_OPTS=[{v:'vencido',l:'Vencidos'},{v:'7',l:'Próximos 7 días'},{v:'30',l:'Próximos 30 días'},{v:'abierto',l:'Todos abiertos'}];
@@ -1278,7 +1279,7 @@ document.addEventListener('click',e=>{
   }
 });
 
-const MS_PLACEHOLDERS={empresa:'Empresa',un:'Unidad negocio',depto:'Departamento',tipo:'Tipo',origen:'Origen',estcorr:'Estado correc.',estacc:'Estado acción',crit:'Criticidad',resp:'Resp. directo',venc:'Vencimiento',respcorr:'Resp. corrección',respacc:'Resp. acción correctiva',codigo:'Código único'};
+const MS_PLACEHOLDERS={empresa:'Empresa',un:'Unidad negocio',depto:'Departamento',sector:'Sector',tipo:'Tipo',origen:'Origen',estcorr:'Estado correc.',estacc:'Estado acción',crit:'Criticidad',resp:'Resp. directo',venc:'Vencimiento',respcorr:'Resp. corrección',respacc:'Resp. acción correctiva',codigo:'Código único'};
 let msOpts={};
 
 // ─── MULTI-SELECT ENGINE — SSOMA (estado propio, no interfiere con Hallazgos) ──
@@ -1356,11 +1357,12 @@ function updateMSLabelSSOMA(selKey, placeholder){
 }
 
 function poblarFiltros(data){
-  const sets={empresa:new Set(),un:new Set(),depto:new Set(),tipo:new Set(),origen:new Set(),estcorr:new Set(),estacc:new Set(),crit:new Set(),resp:new Set(),respcorr:new Set(),respacc:new Set(),codigo:new Set()};
+  const sets={empresa:new Set(),un:new Set(),depto:new Set(),sector:new Set(),tipo:new Set(),origen:new Set(),estcorr:new Set(),estacc:new Set(),crit:new Set(),resp:new Set(),respcorr:new Set(),respacc:new Set(),codigo:new Set()};
   data.forEach(r=>{
     if(r.empresa)sets.empresa.add(r.empresa);
     if(r.unNegocio)sets.un.add(r.unNegocio);
-    if(r.depto)sets.depto.add(r.depto);
+    if(r.depto)separarValoresMulti(r.depto,'').forEach(v=>sets.depto.add(v));
+    if(r.sector)separarValoresMulti(r.sector,'').forEach(v=>sets.sector.add(v));
     if(r.tipoHallazgo)sets.tipo.add(r.tipoHallazgo);
     if(r.origen)sets.origen.add(r.origen);
     if(r.estCorr&&r.estCorr.trim())sets.estcorr.add(r.estCorr.trim());
@@ -1375,6 +1377,7 @@ function poblarFiltros(data){
   msOpts.empresa=toOpts(sets.empresa);
   msOpts.un=toOpts(sets.un);
   msOpts.depto=toOpts(sets.depto);
+  msOpts.sector=toOpts(sets.sector);
   msOpts.tipo=toOpts(sets.tipo);
   msOpts.origen=toOpts(sets.origen);
   msOpts.estcorr=toOpts(sets.estcorr);
@@ -1412,7 +1415,8 @@ function aplicarFiltros(){
   filtrados=rawData.filter(r=>{
     if(SEL.empresa.size>0&&!SEL.empresa.has(r.empresa))return false;
     if(SEL.un.size>0&&!SEL.un.has(r.unNegocio))return false;
-    if(SEL.depto.size>0&&!SEL.depto.has(r.depto))return false;
+    if(SEL.depto.size>0&&!separarValoresMulti(r.depto,'').some(v=>SEL.depto.has(v)))return false;
+    if(SEL.sector.size>0&&!separarValoresMulti(r.sector,'').some(v=>SEL.sector.has(v)))return false;
     if(SEL.tipo.size>0&&!SEL.tipo.has(r.tipoHallazgo))return false;
     if(SEL.origen.size>0&&!SEL.origen.has(r.origen))return false;
     if(SEL.estcorr.size>0&&!SEL.estcorr.has(r.estCorr.trim()))return false;
@@ -4194,7 +4198,20 @@ async function subirArchivosInputSSOMA(inputId, tipo, referencia, onListo){
 }
 
 function listaAdjuntosHtml(referencia){
-  const lista = adjuntosPorReferencia[String(referencia)] || [];
+  // Acepta un solo string (uso normal) o un array de strings — para poder
+  // buscar bajo más de una clave posible (ej: con y sin prefijo, por si el
+  // archivo se subió antes de que empezáramos a usar prefijos por categoría).
+  const refs = Array.isArray(referencia) ? referencia : [referencia];
+  const vistos = new Set();
+  let lista = [];
+  refs.forEach(ref => {
+    (adjuntosPorReferencia[String(ref)] || []).forEach(a => {
+      const clave = a.idDrive || a.link; // evita duplicar si el mismo archivo aparece bajo 2 claves
+      if(vistos.has(clave)) return;
+      vistos.add(clave);
+      lista.push(a);
+    });
+  });
   if(!lista.length) return `<div style="font-size:10px;color:var(--text3)">Sin archivos cargados</div>`;
   return `<div style="display:flex;flex-direction:column;gap:3px">` + lista.map(a => `
     <a href="${a.link}" target="_blank" rel="noopener" style="font-size:10px;color:var(--blue);text-decoration:none;display:flex;align-items:center;gap:4px">
@@ -4335,6 +4352,16 @@ function distinctAccionesHallazgos(campo){
   return [...vals].sort((a,b)=>a.localeCompare(b));
 }
 
+// Criticidad tomada de TODOS los hallazgos (columna original, con años de
+// datos ya cargados) en vez de la hoja nueva de acciones — que todavía
+// tiene pocos registros y una lista más chica/incompleta.
+function distinctCriticidadHallazgos(){
+  const datos = rawData.length ? rawData : filtrados;
+  const vals = new Set();
+  datos.forEach(r => { const v = String(r.crit||'').trim().toUpperCase(); if(v) vals.add(v); });
+  return [...vals].sort((a,b)=>a.localeCompare(b));
+}
+
 function mapRowAccionHallazgo(r){
   const numeroAccion = String(r['Número de acción'] || r['_numeroAccionByCol'] || '').trim();
   return {
@@ -4375,7 +4402,7 @@ async function cargarAccionesHallazgos(){
     rawAccionesHallazgos = json.map(mapRowAccionHallazgo).filter(a => a.numeroAccion && !a.eliminada);
 
     haccCargado = true;
-    hallazgosOptCriticidad = distinctAccionesHallazgos('criticidad');
+    hallazgosOptCriticidad = distinctCriticidadHallazgos();
     document.getElementById('hacc-subtitle').textContent = `${(filtrados.length?filtrados:rawData).length} hallazgos · ${rawAccionesHallazgos.length} acciones cargadas`;
     renderTablaHallazgosAcciones();
   }catch(e){
@@ -4690,7 +4717,7 @@ function abrirVinculoHallazgo(codigo){
     <div class="vinculo-row" style="align-items:flex-start"><label>Descripción</label><span style="font-size:10px;line-height:1.4;font-weight:400">${escHtml(hallazgo.desc)}</span></div>
 
     <div class="vinculo-side-title" style="margin-top:14px">Informe de auditoría (IRAM / Cliente)</div>
-    <div style="margin-bottom:8px">${listaAdjuntosHtml('HALL-AUD-'+codigo)}</div>
+    <div style="margin-bottom:8px">${listaAdjuntosHtml(['HALL-AUD-'+codigo, codigo])}</div>
     <input type="file" id="vh-informeauditoria-files" multiple style="width:100%;font-size:10px">
     <button type="button" style="margin-top:6px;width:100%;justify-content:center" onclick="subirArchivosInputSSOMA('vh-informeauditoria-files','INFORME_AUDITORIA_HALLAZGO','HALL-AUD-${codigo.replace(/'/g,"\\'")}',()=>abrirVinculoHallazgo('${codigo.replace(/'/g,"\\'")}'))">
       <i class="ti ti-upload"></i> Subir archivo(s)
@@ -4784,7 +4811,7 @@ function vinculoAccionHallazgoCard(a){
     </div>
     <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
       <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Evidencia de cierre</div>
-      ${listaAdjuntosHtml('HALL-EV-'+a.numeroAccion)}
+      ${listaAdjuntosHtml(['HALL-EV-'+a.numeroAccion, a.numeroAccion])}
       <div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap">
         <input type="file" id="hacc-files-${a.numeroAccion.replace(/[^a-zA-Z0-9]/g,'_')}" multiple style="font-size:9px;max-width:140px">
         <button type="button" style="font-size:9px;padding:4px 8px" onclick="subirArchivosInputSSOMA('hacc-files-${a.numeroAccion.replace(/[^a-zA-Z0-9]/g,'_')}','EVIDENCIA_CIERRE_HALLAZGO','HALL-EV-${a.numeroAccion}',()=>abrirVinculoHallazgo('${hAccionCodigoActivo.replace(/'/g,"\\'")}'))">
@@ -4914,7 +4941,7 @@ function renderShellFormNuevaAccionHallazgo(){
 
       <div class="usr-field">
         <label>Informe de causa raíz (opcional, podés subir varios)</label>
-        <div style="margin-bottom:6px">${listaAdjuntosHtml('HALL-CR-'+hAccionSerialActivo)}</div>
+        <div style="margin-bottom:6px">${listaAdjuntosHtml(['HALL-CR-'+hAccionSerialActivo, hAccionSerialActivo])}</div>
         <input type="file" id="hf-informecausaraiz-files" multiple>
         <button type="button" style="margin-top:6px" onclick="subirArchivosInputSSOMA('hf-informecausaraiz-files','INFORME_CAUSARAIZ_HALLAZGO','HALL-CR-${hAccionSerialActivo}',()=>abrirVinculoHallazgo('${hAccionCodigoActivo.replace(/'/g,"\\'")}'))">
           <i class="ti ti-upload"></i> Subir archivo(s)
