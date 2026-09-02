@@ -673,6 +673,7 @@ tbody tr:hover td{background:var(--surface2)}
           <strong>Indicadores SGI:</strong>
           <span id="hacc-indicadores-totales">Cargando...</span>
         </div>
+        <div class="seg-leyenda" id="hacc-banda-sgi" style="margin-top:-6px"></div>
         <div class="seg-leyenda-explicacion">
           <strong>Cómo se calcula:</strong>
           <span class="seg-badge seg-badge-fin" style="font-weight:800">XX% cumplido</span> = hallazgos con TODAS sus acciones finalizadas (no cuenta Oportunidades de Mejora, salvo dentro de su propio grupo)
@@ -705,6 +706,31 @@ tbody tr:hover td{background:var(--surface2)}
     </div>
   </div>
 
+  <!-- Filtros SSOMA — compartidos entre Acc./Incidentes y Gráficos HSMA -->
+  <div class="filters-bar ssoma-filtros" id="filtros-ssoma" style="display:none">
+    <div class="ftitle"><i class="ti ti-filter" style="font-size:11px"></i> Filtros — Accidentes/Incidentes</div>
+    <div class="fgrid">
+      <div class="fi"><label>Tipo</label><div class="ms-wrapper" id="ms-ss-tipo"></div></div>
+      <div class="fi"><label>Generante</label><div class="ms-wrapper" id="ms-ss-generante"></div></div>
+      <div class="fi"><label>Empresa</label><div class="ms-wrapper" id="ms-ss-empresa"></div></div>
+      <div class="fi"><label>Unidad de negocio</label><div class="ms-wrapper" id="ms-ss-unnegocio"></div></div>
+      <div class="fi"><label>Estado investigación</label><div class="ms-wrapper" id="ms-ss-estado"></div></div>
+      <div class="fi"><label>Informe final</label><div class="ms-wrapper" id="ms-ss-informe"></div></div>
+      <div class="fi" style="grid-column:span 2">
+        <label>Rango de fechas</label>
+        <div class="fdate">
+          <input type="date" id="ssf-desde" onchange="aplicarFiltrosSSOMA()" title="Desde">
+          <span>—</span>
+          <input type="date" id="ssf-hasta" onchange="aplicarFiltrosSSOMA()" title="Hasta">
+        </div>
+      </div>
+    </div>
+    <div class="ffooter">
+      <span class="fcount" id="ssoma-fcount">— registros</span>
+      <button onclick="limpiarFiltrosSSOMA()"><i class="ti ti-x"></i> Limpiar filtros</button>
+    </div>
+  </div>
+
   <!-- ═══════════ TAB SSOMA — ACC./INCIDENTES ═══════════ -->
   <div class="tcontent" id="tab-ssoma">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
@@ -714,30 +740,6 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn-green" onclick="exportarSSOMAExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
-      </div>
-    </div>
-
-    <div class="filters-bar ssoma-filtros">
-      <div class="ftitle"><i class="ti ti-filter" style="font-size:11px"></i> Filtros — Accidentes/Incidentes</div>
-      <div class="fgrid">
-        <div class="fi"><label>Tipo</label><div class="ms-wrapper" id="ms-ss-tipo"></div></div>
-        <div class="fi"><label>Generante</label><div class="ms-wrapper" id="ms-ss-generante"></div></div>
-        <div class="fi"><label>Empresa</label><div class="ms-wrapper" id="ms-ss-empresa"></div></div>
-        <div class="fi"><label>Unidad de negocio</label><div class="ms-wrapper" id="ms-ss-unnegocio"></div></div>
-        <div class="fi"><label>Estado investigación</label><div class="ms-wrapper" id="ms-ss-estado"></div></div>
-        <div class="fi"><label>Informe final</label><div class="ms-wrapper" id="ms-ss-informe"></div></div>
-        <div class="fi" style="grid-column:span 2">
-          <label>Rango de fechas</label>
-          <div class="fdate">
-            <input type="date" id="ssf-desde" onchange="aplicarFiltrosSSOMA()" title="Desde">
-            <span>—</span>
-            <input type="date" id="ssf-hasta" onchange="aplicarFiltrosSSOMA()" title="Hasta">
-          </div>
-        </div>
-      </div>
-      <div class="ffooter">
-        <span class="fcount" id="ssoma-fcount">— registros</span>
-        <button onclick="limpiarFiltrosSSOMA()"><i class="ti ti-x"></i> Limpiar filtros</button>
       </div>
     </div>
 
@@ -1047,6 +1049,9 @@ function switchTab(id,el){
   const kH = document.getElementById('kpis-hallazgos');
   if(fH) fH.style.display = esSSOMA ? 'none' : '';
   if(kH) kH.style.display = esSSOMA ? 'none' : '';
+  // Filtros de SSOMA (compartidos entre Acc./Incidentes y Gráficos HSMA)
+  const fSS = document.getElementById('filtros-ssoma');
+  if(fSS) fSS.style.display = esSSOMA ? '' : 'none';
   if(id==='log' && SESSION && SESSION.rol==='admin') cargarLogSheet();
   if(id==='usuarios' && SESSION && SESSION.rol==='admin') cargarUsuariosSheet();
   if(id==='responsables' && filtrados.length) {
@@ -1974,7 +1979,7 @@ function normCierre(v){
 // ─── NORMALIZACIÓN TIPO HALLAZGO ─────────────────────────────────────────
 function normTipo(v){
   v = String(v==null?'':v);
-  if(!v)return'';
+  if(!v)return'Carga de SGI';
   const t=v.trim().toLowerCase();
   if(t.includes('no conform'))return'No Conformidad';
   if(t.includes('oportunidad'))return'Oportunidad de Mejora';
@@ -3132,9 +3137,10 @@ function toggleComparativaSSOMA(){
 
 function renderAnalisisSSOMA(){
   if(!rawSSOMA.length) return;
+  const datosSSOMA = filtradosSSOMA.length ? filtradosSSOMA : datosSSOMA;
 
   // ── Accidentes por mes y centro de costo (Unidad de negocio) ──
-  const accidentes = rawSSOMA.filter(r => (r.tipo||'').toLowerCase().includes('accidente'));
+  const accidentes = datosSSOMA.filter(r => (r.tipo||'').toLowerCase().includes('accidente'));
   const porMes = {};
   accidentes.forEach(r=>{
     const key = ssomaMesKey(r.fecha);
@@ -3176,7 +3182,7 @@ function renderAnalisisSSOMA(){
   if(ssomaCompareOn){
     const totalesAnioAnterior = ejeX.map(k => {
       const kAnt = ssomaMesAnterior(k);
-      const eventosAnt = rawSSOMA.filter(r => (r.tipo||'').toLowerCase().includes('accidente') && ssomaMesKey(r.fecha) === kAnt);
+      const eventosAnt = datosSSOMA.filter(r => (r.tipo||'').toLowerCase().includes('accidente') && ssomaMesKey(r.fecha) === kAnt);
       return eventosAnt.length;
     });
     datasets.push({
@@ -3212,7 +3218,7 @@ function renderAnalisisSSOMA(){
   }
 
   // ── Incidentes por mes (total, sin desglose) ──
-  const incidentes = rawSSOMA.filter(r => {
+  const incidentes = datosSSOMA.filter(r => {
     const t = (r.tipo||'').toLowerCase();
     return t.includes('incidente') && !t.includes('accidente');
   });
@@ -3330,11 +3336,12 @@ function ssomaBar(id, entries, color, horizontal){
 }
 
 function renderIndicadoresGeneralesSSOMA(){
+  const datosSSOMA = filtradosSSOMA.length ? filtradosSSOMA : rawSSOMA;
   const paleta = SSOMA_PALETA;
 
   // ── FILA 1: Evolución mensual (todas las categorías, actual vs año anterior) ──
   const porMesTodo = {};
-  rawSSOMA.forEach(r=>{
+  datosSSOMA.forEach(r=>{
     const key = ssomaMesKey(r.fecha);
     if(!key) return;
     if(!porMesTodo[key]) porMesTodo[key] = {total:0, acc:0, inc:0, casi:0};
@@ -3405,27 +3412,27 @@ function renderIndicadoresGeneralesSSOMA(){
   }
 
   // ── FILA 3 ──
-  ssomaDonut('sevreal', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.severidad), 6), paleta);
-  ssomaDonut('sevpot', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.severidadPot), 6), paleta);
-  ssomaDonut('contacto', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.tipoContacto), 6), paleta);
+  ssomaDonut('sevreal', ssomaTopNOtros(ssomaCountBy(datosSSOMA, r=>r.severidad), 6), paleta);
+  ssomaDonut('sevpot', ssomaTopNOtros(ssomaCountBy(datosSSOMA, r=>r.severidadPot), 6), paleta);
+  ssomaDonut('contacto', ssomaTopNOtros(ssomaCountBy(datosSSOMA, r=>r.tipoContacto), 6), paleta);
 
   // ── FILA 4 ──
-  ssomaDonut('lesiones', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.lesiones), 4), ['#C00000','#1D9E75','#888780']);
+  ssomaDonut('lesiones', ssomaTopNOtros(ssomaCountBy(datosSSOMA, r=>r.lesiones), 4), ['#C00000','#1D9E75','#888780']);
   const derrameCounts = {};
-  rawSSOMA.forEach(r=>{ const b = ssomaBucketDerrame(r.m3Derramados); if(b) derrameCounts[b]=(derrameCounts[b]||0)+1; });
+  datosSSOMA.forEach(r=>{ const b = ssomaBucketDerrame(r.m3Derramados); if(b) derrameCounts[b]=(derrameCounts[b]||0)+1; });
   const ordenDerrame = ['Sin derrame (0)','0 - 1 m³','1 - 5 m³','5 - 20 m³','> 20 m³'];
   const derrameEntries = ordenDerrame.filter(k=>derrameCounts[k]).map(k=>[k,derrameCounts[k]]);
   ssomaBar('derrames', derrameEntries, '#378ADD', false);
-  ssomaDonut('empresa', ssomaTopNOtros(ssomaCountByNorm(rawSSOMA, r=>r.empresa), 6), paleta);
+  ssomaDonut('empresa', ssomaTopNOtros(ssomaCountByNorm(datosSSOMA, r=>r.empresa), 6), paleta);
 
   // ── FILA 5 ──
-  ssomaDonut('provincia', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.provincia), 6), paleta);
-  ssomaBar('centrocosto', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.unNegocio), 8), '#534AB7', true);
-  ssomaDonut('perdidas', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.perdidas), 6), paleta);
+  ssomaDonut('provincia', ssomaTopNOtros(ssomaCountBy(datosSSOMA, r=>r.provincia), 6), paleta);
+  ssomaBar('centrocosto', ssomaTopNOtros(ssomaCountBy(datosSSOMA, r=>r.unNegocio), 8), '#534AB7', true);
+  ssomaDonut('perdidas', ssomaTopNOtros(ssomaCountBy(datosSSOMA, r=>r.perdidas), 6), paleta);
 
   // ── FILA 6 ──
-  ssomaDonut('clasificacion', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.categoria), 6), paleta);
-  ssomaDonut('culpabilidad', ssomaTopNOtros(ssomaCountBy(rawSSOMA, r=>r.culpabilidad), 6), paleta);
+  ssomaDonut('clasificacion', ssomaTopNOtros(ssomaCountBy(datosSSOMA, r=>r.categoria), 6), paleta);
+  ssomaDonut('culpabilidad', ssomaTopNOtros(ssomaCountBy(datosSSOMA, r=>r.culpabilidad), 6), paleta);
 }
 
 async function cargarSSOMA(){
@@ -3544,6 +3551,7 @@ function aplicarFiltrosSSOMA(){
   renderTecnicoGenerante(filtradosSSOMA);
   renderTablaSSOMA(filtradosSSOMA);
   renderArbolAccidentes();
+  if(document.getElementById('tab-ssomaanalisis')?.classList.contains('active')) renderAnalisisSSOMA();
 }
 
 function limpiarFiltrosSSOMA(){
@@ -4522,6 +4530,89 @@ function procesoPendiente(h){
   return accionesDeHallazgo(codigoLimpio).length === 0;
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  SISTEMA DE PUNTUACIÓN Y BANDAS DE RESULTADO (SGI)
+// ══════════════════════════════════════════════════════════════════════
+// Puntaje fijo por Tipo de hallazgo. Integral, No aplica y Carga de SGI
+// quedan afuera del cálculo — devuelven null, y quien llama a esto tiene
+// que descartarlos (no suman puntos ni cuentan en el denominador).
+const PUNTAJE_SGI_POR_TIPO = {
+  'Fortaleza': 2,
+  'Oportunidad de Mejora': 2,
+  'Observación': 1,
+  'No Conformidad': 0,
+};
+function puntajeSGI(tipoHallazgo){
+  return PUNTAJE_SGI_POR_TIPO.hasOwnProperty(tipoHallazgo) ? PUNTAJE_SGI_POR_TIPO[tipoHallazgo] : null;
+}
+
+// Un hallazgo cuenta para el indicador SGI si su Tipo tiene puntaje
+// definido (No Conformidad, Observación, Oportunidad de Mejora, Fortaleza).
+// Integral / No aplica / Carga de SGI quedan afuera.
+function cuentaParaSGI(h){
+  return puntajeSGI(h.tipoHallazgo) !== null;
+}
+
+// Calcula el % de cumplimiento SGI de una lista de hallazgos: puntos
+// obtenidos sobre puntos máximos posibles (2 por ítem que cuenta).
+function calcularCumplimientoSGI(listaHallazgos){
+  let puntosObtenidos = 0, puntosMaximos = 0, totalItems = 0;
+  listaHallazgos.forEach(h => {
+    const p = puntajeSGI(h.tipoHallazgo);
+    if(p === null) return; // Integral / No aplica / Carga de SGI — no cuentan
+    totalItems++;
+    puntosObtenidos += p;
+    puntosMaximos += 2;
+  });
+  const pct = puntosMaximos ? Math.round(puntosObtenidos / puntosMaximos * 100) : 0;
+  return { totalItems, puntosObtenidos, puntosMaximos, pct };
+}
+
+// Una No Conformidad cuenta como "activa" mientras no esté totalmente
+// Finalizada (misma lógica de resumen ya usada en el resto del sistema).
+function esNoConformidadActiva(h){
+  if(h.tipoHallazgo !== 'No Conformidad') return false;
+  return estadoResumenHallazgo(h) !== 'FINALIZADO';
+}
+
+// "NC crítica": una No Conformidad activa cuya Criticidad viene marcada
+// como crítica en el hallazgo (columna Criticidad).
+// NOTA: asumo que "crítica" aparece en el texto de Criticidad (ej:
+// "Crítica", "CRÍTICA"). Si tu convención usa otra palabra, avisame y
+// ajusto el criterio.
+function esNoConformidadCritica(h){
+  if(!esNoConformidadActiva(h)) return false;
+  return String(h.crit||'').toUpperCase().includes('CRIT');
+}
+
+// Banda de resultado SGI, según el sistema de imagen que definiste:
+// 🟢 VERDE  — % ≥80 Y sin NC activas
+// 🟡 AMARILLA — 60-79% Y NC activas ≤2 (sin NC crítica)
+// 🔴 ROJA — <60%, o NC activas >2, o alguna NC crítica
+// El corte por cantidad de NC manda por sobre el %: un sector con 85% pero
+// 3 NC activas sigue siendo ROJA.
+function bandaResultadoSGI(pct, ncActivas, hayNcCritica){
+  if(pct < 60 || ncActivas > 2 || hayNcCritica){
+    return { banda:'ROJA', clase:'seg-badge-pend', frecuencia:'Seguimiento mensual durante 6 meses.' };
+  }
+  if(pct >= 80 && ncActivas === 0){
+    return { banda:'VERDE', clase:'seg-badge-fin', frecuencia:'Auditoría al próximo año. Sector en gestión óptima.' };
+  }
+  return { banda:'AMARILLA', clase:'seg-badge-curso', frecuencia:'Seguimiento trimestral durante el año. Plan de mejora activo.' };
+}
+
+// Arma el indicador SGI completo (puntaje + banda + NC) para una lista de
+// hallazgos — pensado para usarse en cualquier agrupación (Sector,
+// Departamento, general).
+function indicadorSGI(listaHallazgos){
+  const { totalItems, puntosObtenidos, puntosMaximos, pct } = calcularCumplimientoSGI(listaHallazgos);
+  const ncActivasList = listaHallazgos.filter(esNoConformidadActiva);
+  const ncActivas = ncActivasList.length;
+  const hayNcCritica = ncActivasList.some(esNoConformidadCritica);
+  const { banda, clase, frecuencia } = bandaResultadoSGI(pct, ncActivas, hayNcCritica);
+  return { totalItems, puntosObtenidos, puntosMaximos, pct, ncActivas, hayNcCritica, banda, clase, frecuencia };
+}
+
 // Arma los indicadores de estado (badges) para una lista de hallazgos.
 // Arma los 8 indicadores como columnas de ANCHO FIJO, siempre en el mismo
 // orden — % Cumplimiento, Sin acción, Pendiente, En curso, Finalizado,
@@ -4623,6 +4714,17 @@ function renderTablaHallazgosAcciones(){
   // Indicadores totales SGI (sobre todos los hallazgos cargados, sin importar Sector/Departamento)
   const indTotales = document.getElementById('hacc-indicadores-totales');
   if(indTotales) indTotales.innerHTML = `(${datos.length} hallazgo${datos.length!==1?'s':''}) ${badgesFila(datos)}`;
+
+  const indBanda = document.getElementById('hacc-banda-sgi');
+  if(indBanda){
+    const ind = indicadorSGI(datos);
+    const iconoBanda = ind.banda==='VERDE' ? '🟢' : ind.banda==='AMARILLA' ? '🟡' : '🔴';
+    indBanda.innerHTML = `
+      <span class="seg-badge ${ind.clase}" style="font-weight:800">${iconoBanda} BANDA ${ind.banda}</span>
+      <span style="font-size:10.5px;color:var(--text2)">${ind.puntosObtenidos}/${ind.puntosMaximos} pts (${ind.pct}%) · ${ind.totalItems} ítems puntuables · ${ind.ncActivas} NC activa${ind.ncActivas!==1?'s':''}${ind.hayNcCritica?' (incluye NC crítica)':''}</span>
+      <span style="font-size:10px;color:var(--text3);font-style:italic">${ind.frecuencia}</span>
+    `;
+  }
 
   // Guardar qué ramas estaban abiertas antes de redibujar, para reabrirlas
   // después — así editar un campo no colapsa todo el árbol.
