@@ -4605,9 +4605,18 @@ function bandaResultadoSGI(pct, ncActivas, hayNcCritica){
 // Arma el indicador SGI completo (puntaje + banda + NC) para una lista de
 // hallazgos — pensado para usarse en cualquier agrupación (Sector,
 // Departamento, general).
+// El indicador SGI (puntaje + banda) solo contempla hallazgos que vienen de
+// Auditoría Interna — cualquier otro Origen (Auditoría Externa, denuncia,
+// inspección, etc.) queda afuera de este cálculo puntual.
+function esAuditoriaInterna(h){
+  const o = String(h.origen||'').toUpperCase();
+  return o.includes('AUDITOR') && o.includes('INTERNA');
+}
+
 function indicadorSGI(listaHallazgos){
-  const { totalItems, puntosObtenidos, puntosMaximos, pct } = calcularCumplimientoSGI(listaHallazgos);
-  const ncActivasList = listaHallazgos.filter(esNoConformidadActiva);
+  const listaAI = listaHallazgos.filter(esAuditoriaInterna);
+  const { totalItems, puntosObtenidos, puntosMaximos, pct } = calcularCumplimientoSGI(listaAI);
+  const ncActivasList = listaAI.filter(esNoConformidadActiva);
   const ncActivas = ncActivasList.length;
   const hayNcCritica = ncActivasList.some(esNoConformidadCritica);
   const { banda, clase, frecuencia } = bandaResultadoSGI(pct, ncActivas, hayNcCritica);
@@ -4710,8 +4719,11 @@ function tablaHallazgosSegmento(lista){
 // indicadores de estado en cada rama de Sector/Departamento.
 function bandaSGIBadgeHtml(listaHallazgos){
   const ind = indicadorSGI(listaHallazgos);
+  if(ind.totalItems === 0){
+    return `<span class="seg-badge seg-badge-sinacc" title="No hay hallazgos de Auditoría Interna puntuables en esta rama">— % SGI</span>`;
+  }
   const icono = ind.banda==='VERDE' ? '🟢' : ind.banda==='AMARILLA' ? '🟡' : '🔴';
-  const titulo = `${ind.puntosObtenidos}/${ind.puntosMaximos} pts · ${ind.totalItems} ítems puntuables · ${ind.ncActivas} NC activa${ind.ncActivas!==1?'s':''}${ind.hayNcCritica?' (con NC crítica)':''} · ${ind.frecuencia}`;
+  const titulo = `${ind.puntosObtenidos}/${ind.puntosMaximos} pts · ${ind.totalItems} ítems puntuables (Auditoría Interna) · ${ind.ncActivas} NC activa${ind.ncActivas!==1?'s':''}${ind.hayNcCritica?' (con NC crítica)':''} · ${ind.frecuencia}`;
   return `<span class="seg-badge ${ind.clase}" style="font-weight:800" title="${escHtml(titulo)}">${icono} ${ind.pct}% SGI</span>`;
 }
 
@@ -4728,12 +4740,16 @@ function renderTablaHallazgosAcciones(){
   const indBanda = document.getElementById('hacc-banda-sgi');
   if(indBanda){
     const ind = indicadorSGI(datos);
-    const iconoBanda = ind.banda==='VERDE' ? '🟢' : ind.banda==='AMARILLA' ? '🟡' : '🔴';
-    indBanda.innerHTML = `
-      <span class="seg-badge ${ind.clase}" style="font-weight:800">${iconoBanda} BANDA ${ind.banda}</span>
-      <span style="font-size:10.5px;color:var(--text2)">${ind.puntosObtenidos}/${ind.puntosMaximos} pts (${ind.pct}%) · ${ind.totalItems} ítems puntuables · ${ind.ncActivas} NC activa${ind.ncActivas!==1?'s':''}${ind.hayNcCritica?' (incluye NC crítica)':''}</span>
-      <span style="font-size:10px;color:var(--text3);font-style:italic">${ind.frecuencia}</span>
-    `;
+    if(ind.totalItems === 0){
+      indBanda.innerHTML = `<span style="font-size:10.5px;color:var(--text3)"><strong>Puntaje SGI:</strong> sin hallazgos de Auditoría Interna puntuables todavía</span>`;
+    } else {
+      const iconoBanda = ind.banda==='VERDE' ? '🟢' : ind.banda==='AMARILLA' ? '🟡' : '🔴';
+      indBanda.innerHTML = `
+        <span class="seg-badge ${ind.clase}" style="font-weight:800">${iconoBanda} BANDA ${ind.banda}</span>
+        <span style="font-size:10.5px;color:var(--text2)">${ind.puntosObtenidos}/${ind.puntosMaximos} pts (${ind.pct}%) · ${ind.totalItems} ítems puntuables (Auditoría Interna) · ${ind.ncActivas} NC activa${ind.ncActivas!==1?'s':''}${ind.hayNcCritica?' (incluye NC crítica)':''}</span>
+        <span style="font-size:10px;color:var(--text3);font-style:italic">${ind.frecuencia}</span>
+      `;
+    }
   }
 
   // Guardar qué ramas estaban abiertas antes de redibujar, para reabrirlas
