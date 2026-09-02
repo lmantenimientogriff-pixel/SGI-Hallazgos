@@ -361,6 +361,7 @@ tbody tr:hover td{background:var(--surface2)}
 .seg-sector>summary,.seg-depto>summary,.seg-tipo>summary,.seg-respdir>summary{cursor:pointer;padding:9px 12px;font-size:12px;font-weight:700;color:var(--text);list-style:none;display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
 .seg-summary-label{display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0}
 .seg-summary-badges{display:grid;grid-template-columns:repeat(8, minmax(60px,74px));gap:4px;margin-left:auto;justify-items:end}
+.seg-badge-sgi-wrap{flex-shrink:0;white-space:nowrap}
 .seg-badge-col{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:10px;text-align:center;white-space:nowrap;width:100%;box-sizing:border-box}
 .seg-badge-col-vacio{opacity:.2}
 .seg-sector>summary::before{content:"📁";font-size:11px}
@@ -4705,6 +4706,15 @@ function tablaHallazgosSegmento(lista){
   </table></div>`;
 }
 
+// Badge compacto de banda SGI (puntaje + color), para mostrar junto a los
+// indicadores de estado en cada rama de Sector/Departamento.
+function bandaSGIBadgeHtml(listaHallazgos){
+  const ind = indicadorSGI(listaHallazgos);
+  const icono = ind.banda==='VERDE' ? '🟢' : ind.banda==='AMARILLA' ? '🟡' : '🔴';
+  const titulo = `${ind.puntosObtenidos}/${ind.puntosMaximos} pts · ${ind.totalItems} ítems puntuables · ${ind.ncActivas} NC activa${ind.ncActivas!==1?'s':''}${ind.hayNcCritica?' (con NC crítica)':''} · ${ind.frecuencia}`;
+  return `<span class="seg-badge ${ind.clase}" style="font-weight:800" title="${escHtml(titulo)}">${icono} ${ind.pct}% SGI</span>`;
+}
+
 function renderTablaHallazgosAcciones(){
   const cont = document.getElementById('hacc-segmentado');
   if(!cont) return;
@@ -4741,14 +4751,14 @@ function renderTablaHallazgosAcciones(){
     const deptos = Object.keys(estructura[sector]).sort();
     const pathSector = sector;
     return `<details class="seg-sector" data-path="${escHtml(pathSector)}">
-      <summary><span class="seg-summary-label">${escHtml(sector)} <span class="seg-count">(${hSector.length} hallazgo${hSector.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesFila(hSector)}</span></summary>
+      <summary><span class="seg-summary-label">${escHtml(sector)} <span class="seg-count">(${hSector.length} hallazgo${hSector.length!==1?'s':''})</span></span><span class="seg-badge-sgi-wrap">${bandaSGIBadgeHtml(hSector)}</span><span class="seg-summary-badges">${badgesFila(hSector)}</span></summary>
       <div class="seg-body">
         ${deptos.map(depto => {
           const hDepto = recolectarHallazgos(estructura[sector][depto]);
           const tipos = ordenarTipos(Object.keys(estructura[sector][depto]));
           const pathDepto = pathSector + '|||' + depto;
           return `<details class="seg-depto" data-path="${escHtml(pathDepto)}">
-            <summary><span class="seg-summary-label">${escHtml(depto)} <span class="seg-count">(${hDepto.length} hallazgo${hDepto.length!==1?'s':''})</span></span><span class="seg-summary-badges">${badgesFila(hDepto)}</span></summary>
+            <summary><span class="seg-summary-label">${escHtml(depto)} <span class="seg-count">(${hDepto.length} hallazgo${hDepto.length!==1?'s':''})</span></span><span class="seg-badge-sgi-wrap">${bandaSGIBadgeHtml(hDepto)}</span><span class="seg-summary-badges">${badgesFila(hDepto)}</span></summary>
             <div class="seg-body">
               ${tipos.map(tipo => {
                 const hTipo = recolectarHallazgos(estructura[sector][depto][tipo]);
