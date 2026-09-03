@@ -689,6 +689,11 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
       <div id="hacc-segmentado" style="padding:0 12px 12px">Cargando...</div>
     </div>
+
+    <div class="tbl-card">
+      <div class="tbl-hdr"><div class="ct">Dashboard SGI — Resultado consolidado por Sector y Departamento</div></div>
+      <div id="hacc-dashboard-sgi" style="padding:12px">Cargando...</div>
+    </div>
   </div>
 
   <!-- ═══════════ MODAL VÍNCULO HALLAZGO ↔ ACCIONES ═══════════ -->
@@ -4388,6 +4393,7 @@ function mapRowAccionHallazgo(r){
     obsCierre:   r['Observaciones - cierre'] || '',
     estVerif:    (r['Estado de la verificación'] || '').toString().trim(),
     obsVerif:    r['Verificación eficacia / Observaciones'] || '',
+    fechaVerif:  r['Fecha de verificación'] || '',
     eliminada:   String(r['_eliminadaByCol'] || '').trim(),
   };
 }
@@ -4623,6 +4629,101 @@ function indicadorSGI(listaHallazgos){
   return { totalItems, puntosObtenidos, puntosMaximos, pct, ncActivas, hayNcCritica, banda, clase, frecuencia };
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  DASHBOARD SGI — RESULTADO CONSOLIDADO POR SECTOR Y DEPARTAMENTO
+// ══════════════════════════════════════════════════════════════════════
+
+// Mismo criterio "activa" que ya usamos para NC, aplicado a Observación y
+// a Oportunidad de Mejora (no está Finalizada todavía).
+function esObservacionActiva(h){
+  if(h.tipoHallazgo !== 'Observación') return false;
+  return estadoResumenHallazgo(h) !== 'FINALIZADO';
+}
+function esOportunidadMejoraActiva(h){
+  if(h.tipoHallazgo !== 'Oportunidad de Mejora') return false;
+  return estadoResumenHallazgo(h) !== 'FINALIZADO';
+}
+
+// "Última auditoría" = la Fecha de verificación más reciente entre las
+// acciones de los hallazgos de Auditoría Interna de este grupo. Se
+// recalcula sola cada vez que se actualiza una verificación (Fase 2).
+function ultimaAuditoriaDe(listaHallazgos){
+  let maxFecha = null;
+  listaHallazgos.filter(esAuditoriaInterna).forEach(h => {
+    const codigoLimpio = codigoLimpioDe(h);
+    accionesDeHallazgo(codigoLimpio).forEach(a => {
+      const f = parseDate(a.fechaVerif);
+      if(f && (!maxFecha || f > maxFecha)) maxFecha = f;
+    });
+  });
+  return maxFecha;
+}
+
+// Agrupa TODOS los hallazgos cargados (respetando los filtros activos) en
+// dos listas planas: por Sector y por Departamento. Usa separarValoresMulti
+// porque una celda puede tener más de un valor cargado.
+function agruparParaDashboardSGI(){
+  const datos = (filtrados.length ? filtrados : rawData);
+  const porSector = {}, porDepto = {};
+  datos.forEach(h => {
+    separarValoresMulti(h.sector, 'Sin sector').forEach(s => { (porSector[s] ||= []).push(h); });
+    separarValoresMulti(h.depto, 'Sin departamento').forEach(d => { (porDepto[d] ||= []).push(h); });
+  });
+  return { porSector, porDepto };
+}
+
+// Arma una fila completa del dashboard (puntaje, banda, NC/OBS/OM activas,
+// última auditoría) para un grupo (un Sector o un Departamento puntual).
+function filaDashboardSGI(nombre, listaHallazgos){
+  const ind = indicadorSGI(listaHallazgos);
+  const listaAI = listaHallazgos.filter(esAuditoriaInterna);
+  const obsActivas = listaAI.filter(esObservacionActiva).length;
+  const omActivas = listaAI.filter(esOportunidadMejoraActiva).length;
+  const ultimaAuditoria = ultimaAuditoriaDe(listaHallazgos);
+  return { nombre, ...ind, obsActivas, omActivas, ultimaAuditoria };
+}
+
+function filaDashboardSGIHtml(fila){
+  if(fila.totalItems === 0){
+    return `<tr>
+      <td><strong>${escHtml(fila.nombre)}</strong></td>
+      <td colspan="9" style="color:var(--text3);font-style:italic">Sin hallazgos de Auditoría Interna puntuables</td>
+    </tr>`;
+  }
+  const icono = fila.banda==='VERDE' ? '🟢' : fila.banda==='AMARILLA' ? '🟡' : '🔴';
+  return `<tr>
+    <td><strong>${escHtml(fila.nombre)}</strong></td>
+    <td style="text-align:center">${fila.totalItems}</td>
+    <td style="text-align:center">${fila.puntosObtenidos}</td>
+    <td style="text-align:center">${fila.puntosMaximos}</td>
+    <td style="text-align:center;font-weight:700">${fila.pct}%</td>
+    <td><span class="seg-badge ${fila.clase}" style="font-weight:800">${icono} ${fila.banda}</span></td>
+    <td style="text-align:center">${fila.ncActivas}${fila.hayNcCritica?' ⚠️':''}</td>
+    <td style="text-align:center">${fila.obsActivas}</td>
+    <td style="text-align:center">${fila.omActivas}</td>
+    <td style="white-space:nowrap">${fila.ultimaAuditoria ? fmtDate(fila.ultimaAuditoria) : '—'}</td>
+  </tr>`;
+}
+
+function renderDashboardSGI(){
+  const cont = document.getElementById('hacc-dashboard-sgi');
+  if(!cont) return;
+  const { porSector, porDepto } = agruparParaDashboardSGI();
+  const filasSector = Object.keys(porSector).sort().map(s => filaDashboardSGI(s, porSector[s]));
+  const filasDepto = Object.keys(porDepto).sort().map(d => filaDashboardSGI(d, porDepto[d]));
+  const encabezado = `<thead><tr>
+    <th>Nombre</th><th>Ítems</th><th>Pts. obt.</th><th>Pts. máx.</th><th>% Cumpl.</th>
+    <th>Banda</th><th>NC activas</th><th>OBS activas</th><th>OM activas</th><th>Última auditoría</th>
+  </tr></thead>`;
+
+  cont.innerHTML = `
+    <div style="font-size:11px;font-weight:700;color:var(--text2);margin:2px 0 6px">Por Sector</div>
+    <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasSector.map(filaDashboardSGIHtml).join('')}</tbody></table></div>
+    <div style="font-size:11px;font-weight:700;color:var(--text2);margin:16px 0 6px">Por Departamento</div>
+    <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasDepto.map(filaDashboardSGIHtml).join('')}</tbody></table></div>
+  `;
+}
+
 // Arma los indicadores de estado (badges) para una lista de hallazgos.
 // Arma los 8 indicadores como columnas de ANCHO FIJO, siempre en el mismo
 // orden — % Cumplimiento, Sin acción, Pendiente, En curso, Finalizado,
@@ -4733,6 +4834,8 @@ function renderTablaHallazgosAcciones(){
   const datos = (filtrados.length ? filtrados : rawData);
   if(!datos.length){ cont.innerHTML = '<div class="empty">Sin hallazgos cargados</div>'; return; }
 
+  renderDashboardSGI();
+
   // Indicadores totales SGI (sobre todos los hallazgos cargados, sin importar Sector/Departamento)
   const indTotales = document.getElementById('hacc-indicadores-totales');
   if(indTotales) indTotales.innerHTML = `(${datos.length} hallazgo${datos.length!==1?'s':''}) ${badgesFila(datos)}`;
@@ -4840,6 +4943,7 @@ function abrirVinculoHallazgo(codigo){
     <div class="vinculo-row"><label>Fecha</label><span>${fmtDate(hallazgo.fechaAud)}</span></div>
     <div class="vinculo-row"><label>Empresa</label><span>${hallazgo.empresa||'—'}</span></div>
     <div class="vinculo-row"><label>Tipo</label><span>${hallazgo.tipoHallazgo||'—'}</span></div>
+    <div class="vinculo-row"><label>Proviene de</label><span>${hallazgo.origen||'—'}</span></div>
     <div class="vinculo-row"><label>Sector</label><span>${hallazgo.sector||'—'}</span></div>
     <div class="vinculo-row"><label>Resp. Directo</label><span>${hallazgo.respDir||'—'}</span></div>
     <div class="vinculo-row" style="align-items:flex-start"><label>Descripción</label><span style="font-size:10px;line-height:1.4;font-weight:400">${escHtml(hallazgo.desc)}</span></div>
