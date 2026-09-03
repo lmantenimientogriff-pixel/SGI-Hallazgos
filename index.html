@@ -540,6 +540,7 @@ tbody tr:hover td{background:var(--surface2)}
   <div class="tabs">
     <div class="tab active" onclick="switchTab('graficos',this)"><i class="ti ti-chart-bar" style="font-size:12px"></i> Gráficos SGI</div>
     <div class="tab" onclick="switchTab('haccionesprueba',this)"><i class="ti ti-sitemap" style="font-size:12px"></i> Gestión Hallazgos</div>
+    <div class="tab" onclick="switchTab('dashboardai',this)"><i class="ti ti-clipboard-check" style="font-size:12px"></i> Dashboard Auditoría Interna</div>
     <div class="tab" id="tab-responsables-btn" onclick="switchTab('responsables',this)" style="display:none"><i class="ti ti-users" style="font-size:12px"></i> Responsables</div>
     <div class="tab" id="tab-detalle-btn" onclick="switchTab('detalle',this)" style="display:none"><i class="ti ti-table" style="font-size:12px"></i> Detalle</div>
     <div class="tab" onclick="switchTab('plan',this)"><i class="ti ti-file-description" style="font-size:12px"></i> Plan de Acción</div>
@@ -689,9 +690,17 @@ tbody tr:hover td{background:var(--surface2)}
       </div>
       <div id="hacc-segmentado" style="padding:0 12px 12px">Cargando...</div>
     </div>
+  </div>
 
+  <!-- ═══════════ TAB DASHBOARD DE AUDITORÍA INTERNA ═══════════ -->
+  <div class="tcontent" id="tab-dashboardai">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">Dashboard de Auditoría Interna</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Resultado consolidado por Sector y Departamento — solo hallazgos de Auditoría Interna</div>
+      </div>
+    </div>
     <div class="tbl-card">
-      <div class="tbl-hdr"><div class="ct">Dashboard SGI — Resultado consolidado por Sector y Departamento</div></div>
       <div id="hacc-dashboard-sgi" style="padding:12px">Cargando...</div>
     </div>
   </div>
@@ -1071,6 +1080,7 @@ function switchTab(id,el){
   if(id==='ssoma') cargarSSOMA();
   if(id==='ssomaanalisis') cargarSSOMA().then(renderAnalisisSSOMA);
   if(id==='haccionesprueba') cargarAccionesHallazgos();
+  if(id==='dashboardai') cargarAccionesHallazgos();
 }
 
 async function cargarLogSheet(){
@@ -4458,6 +4468,24 @@ function separarValoresMulti(texto, etiquetaVacio){
   return partes.length ? partes : [etiquetaVacio];
 }
 
+// Normaliza un valor para AGRUPAR (Sector/Departamento) sin importar si
+// viene con mayúsculas/minúsculas distintas en distintos hallazgos (ej:
+// "Compras" y "COMPRAS" deben ser la MISMA rama, no dos separadas). Guarda
+// la primera forma "bonita" que vio para cada clave y la reutiliza siempre
+// como etiqueta visible — así el agrupamiento es case-insensitive pero el
+// texto que se muestra queda prolijo y consistente.
+const _etiquetasCanonicasAgrupacion = {};
+function claveAgrupacion(valor){
+  const trimmed = String(valor||'').trim();
+  if(!trimmed) return '';
+  const key = trimmed.toUpperCase();
+  if(!_etiquetasCanonicasAgrupacion[key]) _etiquetasCanonicasAgrupacion[key] = trimmed;
+  return key;
+}
+function etiquetaDeAgrupacion(key){
+  return _etiquetasCanonicasAgrupacion[key] || key;
+}
+
 // Orden fijo para "Tipo hallazgo": NC primero, después Observación, después
 // OM — el resto (Fortaleza, Integral, etc.) va después, alfabético.
 const ORDEN_TIPO_HALLAZGO = ['No Conformidad', 'Observación', 'Oportunidad de Mejora'];
@@ -4472,13 +4500,15 @@ function ordenarTipos(tipos){
 }
 
 // { sector: { depto: { tipo: { respDir: [hallazgos] } } } }
+// Sector y Departamento se agrupan por clave normalizada (sin distinguir
+// mayúsculas/minúsculas) — ver claveAgrupacion() más arriba.
 function agruparHallazgosPorSegmento(){
   const datos = (filtrados.length ? filtrados : rawData);
   const estructura = {};
 
   datos.forEach(h => {
-    const sectores = separarValoresMulti(h.sector, 'Sin sector');
-    const deptos = separarValoresMulti(h.depto, 'Sin departamento');
+    const sectores = separarValoresMulti(h.sector, 'Sin sector').map(claveAgrupacion);
+    const deptos = separarValoresMulti(h.depto, 'Sin departamento').map(claveAgrupacion);
     const tipo = h.tipoHallazgo || 'Sin tipo';
     const respDir = h.respDir || 'Sin responsable directo';
 
@@ -4661,13 +4691,14 @@ function ultimaAuditoriaDe(listaHallazgos){
 
 // Agrupa TODOS los hallazgos cargados (respetando los filtros activos) en
 // dos listas planas: por Sector y por Departamento. Usa separarValoresMulti
-// porque una celda puede tener más de un valor cargado.
+// porque una celda puede tener más de un valor cargado, y claveAgrupacion
+// para que "Compras"/"COMPRAS" no queden como filas separadas.
 function agruparParaDashboardSGI(){
   const datos = (filtrados.length ? filtrados : rawData);
   const porSector = {}, porDepto = {};
   datos.forEach(h => {
-    separarValoresMulti(h.sector, 'Sin sector').forEach(s => { (porSector[s] ||= []).push(h); });
-    separarValoresMulti(h.depto, 'Sin departamento').forEach(d => { (porDepto[d] ||= []).push(h); });
+    separarValoresMulti(h.sector, 'Sin sector').map(claveAgrupacion).forEach(s => { (porSector[s] ||= []).push(h); });
+    separarValoresMulti(h.depto, 'Sin departamento').map(claveAgrupacion).forEach(d => { (porDepto[d] ||= []).push(h); });
   });
   return { porSector, porDepto };
 }
@@ -4709,8 +4740,8 @@ function renderDashboardSGI(){
   const cont = document.getElementById('hacc-dashboard-sgi');
   if(!cont) return;
   const { porSector, porDepto } = agruparParaDashboardSGI();
-  const filasSector = Object.keys(porSector).sort().map(s => filaDashboardSGI(s, porSector[s]));
-  const filasDepto = Object.keys(porDepto).sort().map(d => filaDashboardSGI(d, porDepto[d]));
+  const filasSector = Object.keys(porSector).sort().map(s => filaDashboardSGI(etiquetaDeAgrupacion(s), porSector[s]));
+  const filasDepto = Object.keys(porDepto).sort().map(d => filaDashboardSGI(etiquetaDeAgrupacion(d), porDepto[d]));
   const encabezado = `<thead><tr>
     <th>Nombre</th><th>Ítems</th><th>Pts. obt.</th><th>Pts. máx.</th><th>% Cumpl.</th>
     <th>Banda</th><th>NC activas</th><th>OBS activas</th><th>OM activas</th><th>Última auditoría</th>
@@ -4870,14 +4901,14 @@ function renderTablaHallazgosAcciones(){
     const deptos = Object.keys(estructura[sector]).sort();
     const pathSector = sector;
     return `<details class="seg-sector" data-path="${escHtml(pathSector)}">
-      <summary><span class="seg-summary-label">${escHtml(sector)} <span class="seg-count">(${hSector.length} hallazgo${hSector.length!==1?'s':''})</span></span><span class="seg-badge-sgi-wrap">${bandaSGIBadgeHtml(hSector)}</span><span class="seg-summary-badges">${badgesFila(hSector)}</span></summary>
+      <summary><span class="seg-summary-label">${escHtml(etiquetaDeAgrupacion(sector))} <span class="seg-count">(${hSector.length} hallazgo${hSector.length!==1?'s':''})</span></span><span class="seg-badge-sgi-wrap">${bandaSGIBadgeHtml(hSector)}</span><span class="seg-summary-badges">${badgesFila(hSector)}</span></summary>
       <div class="seg-body">
         ${deptos.map(depto => {
           const hDepto = recolectarHallazgos(estructura[sector][depto]);
           const tipos = ordenarTipos(Object.keys(estructura[sector][depto]));
           const pathDepto = pathSector + '|||' + depto;
           return `<details class="seg-depto" data-path="${escHtml(pathDepto)}">
-            <summary><span class="seg-summary-label">${escHtml(depto)} <span class="seg-count">(${hDepto.length} hallazgo${hDepto.length!==1?'s':''})</span></span><span class="seg-badge-sgi-wrap">${bandaSGIBadgeHtml(hDepto)}</span><span class="seg-summary-badges">${badgesFila(hDepto)}</span></summary>
+            <summary><span class="seg-summary-label">${escHtml(etiquetaDeAgrupacion(depto))} <span class="seg-count">(${hDepto.length} hallazgo${hDepto.length!==1?'s':''})</span></span><span class="seg-badge-sgi-wrap">${bandaSGIBadgeHtml(hDepto)}</span><span class="seg-summary-badges">${badgesFila(hDepto)}</span></summary>
             <div class="seg-body">
               ${tipos.map(tipo => {
                 const hTipo = recolectarHallazgos(estructura[sector][depto][tipo]);
