@@ -526,7 +526,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="kpi"><div class="lbl">2. No Conformidades</div><div class="val" id="k-nc">—</div><div class="sub" id="k-nc-pct">—</div></div>
     <div class="kpi"><div class="lbl">3. Observaciones</div><div class="val" id="k-obs">—</div><div class="sub" id="k-obs-pct">—</div></div>
     <div class="kpi"><div class="lbl">4. Oport. de Mejora</div><div class="val" id="k-om">—</div><div class="sub" id="k-om-pct">—</div></div>
-    <div class="kpi"><div class="lbl">5. Fortalezas</div><div class="val" id="k-fort">—</div><div class="sub" id="k-fort-pct">—</div></div>
+    <div class="kpi"><div class="lbl">5. Conformidad</div><div class="val" id="k-fort">—</div><div class="sub" id="k-fort-pct">—</div></div>
     <div class="kpi"><div class="lbl">6. Integrales</div><div class="val" id="k-int">—</div><div class="sub" id="k-int-pct">—</div></div>
     <div class="kpi ok"><div class="lbl">7. Acc. Finalizadas</div><div class="val" id="k-fin">—</div><div class="sub" id="k-fin-pct">—</div></div>
     <div class="kpi warn"><div class="lbl">8. Acc. En Curso</div><div class="val" id="k-cur">—</div><div class="sub" id="k-cur-pct">—</div></div>
@@ -1204,7 +1204,7 @@ function pillTipo(t){
   if(!t)return'—';
   if(t.toLowerCase().includes('no conform'))return`<span class="pill p-nc">NC</span>`;
   if(t.toLowerCase().includes('oportunidad'))return`<span class="pill p-om">OM</span>`;
-  if(t.toLowerCase().includes('fortaleza'))return`<span class="pill" style="background:var(--green-bg);color:var(--green-text)">FORT</span>`;
+  if(t.toLowerCase().includes('fortaleza')||t.toLowerCase().includes('conformidad')&&!t.toLowerCase().includes('no conform'))return`<span class="pill" style="background:var(--green-bg);color:var(--green-text)">CONF</span>`;
   if(t.toLowerCase().includes('integral'))return`<span class="pill" style="background:var(--purple-bg);color:var(--purple-text)">INT</span>`;
   return`<span class="pill p-obs">OBS</span>`;
 }
@@ -1499,7 +1499,7 @@ function renderTodo(){
   const nc=data.filter(r=>r.tipoHallazgo==='No Conformidad').length;
   const obs=data.filter(r=>r.tipoHallazgo==='Observación').length;
   const om=data.filter(r=>r.tipoHallazgo==='Oportunidad de Mejora').length;
-  const fort=data.filter(r=>r.tipoHallazgo==='Fortaleza').length;
+  const fort=data.filter(r=>r.tipoHallazgo==='Conformidad').length;
   const integ=data.filter(r=>r.tipoHallazgo==='Integral').length;
   const fin=data.filter(r=>estAccClasico(r)==='FINALIZADO').length;
   const cur=data.filter(r=>estAccClasico(r)==='EN CURSO').length;
@@ -2000,7 +2000,7 @@ function normTipo(v){
   if(t.includes('no conform'))return'No Conformidad';
   if(t.includes('oportunidad'))return'Oportunidad de Mejora';
   if(t.includes('observ'))return'Observación';
-  if(t.includes('fortaleza'))return'Fortaleza';
+  if(t.includes('fortaleza')||t.includes('conformidad'))return'Conformidad';
   if(t.includes('integral'))return'Integral';
   return v.trim().replace(/\w\S*/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());
 }
@@ -4487,7 +4487,7 @@ function etiquetaDeAgrupacion(key){
 }
 
 // Orden fijo para "Tipo hallazgo": NC primero, después Observación, después
-// OM — el resto (Fortaleza, Integral, etc.) va después, alfabético.
+// OM — el resto (Conformidad, Integral, etc.) va después, alfabético.
 const ORDEN_TIPO_HALLAZGO = ['No Conformidad', 'Observación', 'Oportunidad de Mejora'];
 function ordenarTipos(tipos){
   return tipos.sort((a,b) => {
@@ -4574,7 +4574,7 @@ function procesoPendiente(h){
 // quedan afuera del cálculo — devuelven null, y quien llama a esto tiene
 // que descartarlos (no suman puntos ni cuentan en el denominador).
 const PUNTAJE_SGI_POR_TIPO = {
-  'Fortaleza': 2,
+  'Conformidad': 2,
   'Oportunidad de Mejora': 2,
   'Observación': 1,
   'No Conformidad': 0,
