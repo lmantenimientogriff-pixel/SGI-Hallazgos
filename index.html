@@ -671,11 +671,11 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="tbl-card">
       <div class="tbl-hdr"><div class="ct">Hallazgos — Sector → Departamento → Tipo → Responsable Directo</div></div>
       <div style="padding:12px 12px 0">
-        <div class="seg-leyenda">
+        <div class="seg-leyenda" style="display:none">
           <strong>Indicadores SGI:</strong>
           <span id="hacc-indicadores-totales">Cargando...</span>
         </div>
-        <div class="seg-leyenda" id="hacc-banda-sgi" style="margin-top:-6px"></div>
+        <div class="seg-leyenda" id="hacc-banda-sgi" style="margin-top:-6px;display:none"></div>
         <div class="seg-leyenda-explicacion">
           <strong>Cómo se calcula:</strong>
           <span class="seg-badge seg-badge-fin" style="font-weight:800">XX% cumplido</span> = hallazgos con TODAS sus acciones finalizadas (no cuenta Oportunidades de Mejora, salvo dentro de su propio grupo)
@@ -4793,6 +4793,10 @@ function filasPilarHtml(listaHallazgos, idBase){
   return filaDashboardSGIHtml(filaP1, idBase+'-p1', true) + filaDashboardSGIHtml(filaP2, idBase+'-p2', true);
 }
 
+// Flag para reactivar fácil el desglose por Sector/Pilar más adelante —
+// por ahora Franco pidió ocultarlo y dejar solo el resultado por Departamento.
+const MOSTRAR_SECTOR_EN_DASHBOARD_AI = false;
+
 function renderDashboardSGI(){
   const cont = document.getElementById('hacc-dashboard-sgi');
   if(!cont) return;
@@ -4804,18 +4808,23 @@ function renderDashboardSGI(){
     <th>Banda</th><th>NC activas</th><th>OBS activas</th><th>OM activas</th><th>Última auditoría</th>
   </tr></thead>`;
 
-  const filasSectorHtml = clavesSector.map((s,i) => {
-    const lista = porSector[s];
-    const fila = filaDashboardSGI(etiquetaDeAgrupacion(s), lista);
-    return filaDashboardSGIHtml(fila, 'sec-'+i) + filasPilarHtml(lista, 'sec-'+i);
-  }).join('');
+  let bloqueSector = '';
+  if(MOSTRAR_SECTOR_EN_DASHBOARD_AI){
+    const filasSectorHtml = clavesSector.map((s,i) => {
+      const lista = porSector[s];
+      const fila = filaDashboardSGI(etiquetaDeAgrupacion(s), lista);
+      return filaDashboardSGIHtml(fila, 'sec-'+i) + filasPilarHtml(lista, 'sec-'+i);
+    }).join('');
+    bloqueSector = `
+    <div style="font-size:11px;font-weight:700;color:var(--text2);margin:2px 0 6px">Por Sector (con desglose P1-Liderazgo / P2-Procesos)</div>
+    <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasSectorHtml}</tbody></table></div>`;
+  }
 
   const filasDeptoHtml = clavesDepto.map((d,i) => filaDashboardSGIHtml(filaDashboardSGI(etiquetaDeAgrupacion(d), porDepto[d]), 'dep-'+i)).join('');
 
   cont.innerHTML = `
-    <div style="font-size:11px;font-weight:700;color:var(--text2);margin:2px 0 6px">Por Sector (con desglose P1-Liderazgo / P2-Procesos)</div>
-    <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasSectorHtml}</tbody></table></div>
-    <div style="font-size:11px;font-weight:700;color:var(--text2);margin:16px 0 6px">Por Departamento</div>
+    ${bloqueSector}
+    <div style="font-size:11px;font-weight:700;color:var(--text2);margin:2px 0 6px">Por Departamento</div>
     <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasDeptoHtml}</tbody></table></div>
   `;
 }
