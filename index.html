@@ -4711,19 +4711,51 @@ function filaDashboardSGI(nombre, listaHallazgos){
   const obsActivas = listaAI.filter(esObservacionActiva).length;
   const omActivas = listaAI.filter(esOportunidadMejoraActiva).length;
   const ultimaAuditoria = ultimaAuditoriaDe(listaHallazgos);
-  return { nombre, ...ind, obsActivas, omActivas, ultimaAuditoria };
+  return { nombre, ...ind, obsActivas, omActivas, ultimaAuditoria, listaHallazgos };
 }
 
-function filaDashboardSGIHtml(fila){
-  if(fila.totalItems === 0){
-    return `<tr>
-      <td><strong>${escHtml(fila.nombre)}</strong></td>
-      <td colspan="9" style="color:var(--text3);font-style:italic">Sin hallazgos de Auditoría Interna puntuables</td>
+// Fila de detalle desplegable: muestra CADA hallazgo del grupo con su
+// Código único, Origen, Tipo y si cuenta (o por qué se excluyó) — para
+// poder comparar directo contra un conteo manual sin adivinar.
+function detalleDashboardSGIHtml(fila, idFila){
+  const filas = fila.listaHallazgos.map(h => {
+    const esAI = esAuditoriaInterna(h);
+    const puntos = puntajeSGI(h.tipoHallazgo);
+    const cuenta = esAI && puntos !== null;
+    let motivo = 'Cuenta';
+    if(!esAI) motivo = 'No es Auditoría Interna (Origen: "' + (h.origen||'vacío') + '")';
+    else if(puntos === null) motivo = 'Tipo no puntuable ("' + (h.tipoHallazgo||'sin tipo') + '")';
+    return `<tr style="${cuenta?'':'opacity:.45'}">
+      <td>${escHtml(h.codigoUnico||'—')}</td>
+      <td>${escHtml(h.origen||'—')}</td>
+      <td>${escHtml(h.tipoHallazgo||'—')}</td>
+      <td style="text-align:center">${cuenta ? puntos : '—'}</td>
+      <td style="font-size:10px;color:${cuenta?'var(--green-text)':'var(--text3)'}">${motivo}</td>
     </tr>`;
+  }).join('');
+  return `<tr id="detalle-${idFila}" style="display:none">
+    <td colspan="10" style="padding:8px 12px;background:var(--surface2)">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:4px">${fila.listaHallazgos.length} hallazgo(s) en este grupo — filas atenuadas = no cuentan para el indicador</div>
+      <table class="seg-tabla" style="width:100%">
+        <thead><tr><th>Código único</th><th>Origen</th><th>Tipo</th><th>Puntos</th><th>Motivo</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </td>
+  </tr>`;
+}
+
+function filaDashboardSGIHtml(fila, idFila){
+  const toggle = `document.getElementById('detalle-${idFila}').style.display = document.getElementById('detalle-${idFila}').style.display==='none'?'':'none'`;
+  const nombreCelda = `<strong>${escHtml(fila.nombre)}</strong> <span style="font-size:9px;color:var(--blue)">(ver detalle)</span>`;
+  if(fila.totalItems === 0){
+    return `<tr onclick="${toggle}" style="cursor:pointer">
+      <td>${nombreCelda}</td>
+      <td colspan="9" style="color:var(--text3);font-style:italic">Sin hallazgos de Auditoría Interna puntuables</td>
+    </tr>` + detalleDashboardSGIHtml(fila, idFila);
   }
   const icono = fila.banda==='VERDE' ? '🟢' : fila.banda==='AMARILLA' ? '🟡' : '🔴';
-  return `<tr>
-    <td><strong>${escHtml(fila.nombre)}</strong></td>
+  return `<tr onclick="${toggle}" style="cursor:pointer">
+    <td>${nombreCelda}</td>
     <td style="text-align:center">${fila.totalItems}</td>
     <td style="text-align:center">${fila.puntosObtenidos}</td>
     <td style="text-align:center">${fila.puntosMaximos}</td>
@@ -4733,7 +4765,7 @@ function filaDashboardSGIHtml(fila){
     <td style="text-align:center">${fila.obsActivas}</td>
     <td style="text-align:center">${fila.omActivas}</td>
     <td style="white-space:nowrap">${fila.ultimaAuditoria ? fmtDate(fila.ultimaAuditoria) : '—'}</td>
-  </tr>`;
+  </tr>` + detalleDashboardSGIHtml(fila, idFila);
 }
 
 function renderDashboardSGI(){
@@ -4749,9 +4781,9 @@ function renderDashboardSGI(){
 
   cont.innerHTML = `
     <div style="font-size:11px;font-weight:700;color:var(--text2);margin:2px 0 6px">Por Sector</div>
-    <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasSector.map(filaDashboardSGIHtml).join('')}</tbody></table></div>
+    <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasSector.map((f,i)=>filaDashboardSGIHtml(f,'sec-'+i)).join('')}</tbody></table></div>
     <div style="font-size:11px;font-weight:700;color:var(--text2);margin:16px 0 6px">Por Departamento</div>
-    <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasDepto.map(filaDashboardSGIHtml).join('')}</tbody></table></div>
+    <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasDepto.map((f,i)=>filaDashboardSGIHtml(f,'dep-'+i)).join('')}</tbody></table></div>
   `;
 }
 
