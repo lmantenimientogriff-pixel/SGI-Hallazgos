@@ -2027,6 +2027,7 @@ function mapRow(r){
     respDir:S(r['Responsable Directo - APELLIDOYNOMBRE']),
     nHall:S(r['Código único']||r['N° HALLAZGO']),
     codigoUnico:S(r['Código único']),
+    pilar:S(r['Pilar']),
     desc:S(r['Descripción del hallazgo']),
     correccion:S(r['Corrección  (la corrección elimina el desvío)']||r['Corrección']),
     respCorr:S(r['Resp. Implementación - APELLIDO']),
@@ -4744,18 +4745,21 @@ function detalleDashboardSGIHtml(fila, idFila){
   </tr>`;
 }
 
-function filaDashboardSGIHtml(fila, idFila){
+function filaDashboardSGIHtml(fila, idFila, esSubfila){
   const toggle = `document.getElementById('detalle-${idFila}').style.display = document.getElementById('detalle-${idFila}').style.display==='none'?'':'none'`;
-  const nombreCelda = `<strong>${escHtml(fila.nombre)}</strong> <span style="font-size:9px;color:var(--blue)">(ver detalle)</span>`;
+  const estiloSubfila = esSubfila ? 'background:var(--surface2)' : '';
+  const nombreHtml = esSubfila
+    ? `<span style="padding-left:18px;color:var(--text2)">↳ ${escHtml(fila.nombre)}</span> <span style="font-size:9px;color:var(--blue)">(ver detalle)</span>`
+    : `<strong>${escHtml(fila.nombre)}</strong> <span style="font-size:9px;color:var(--blue)">(ver detalle)</span>`;
   if(fila.totalItems === 0){
-    return `<tr onclick="${toggle}" style="cursor:pointer">
-      <td>${nombreCelda}</td>
+    return `<tr onclick="${toggle}" style="cursor:pointer;${estiloSubfila}">
+      <td>${nombreHtml}</td>
       <td colspan="9" style="color:var(--text3);font-style:italic">Sin hallazgos de Auditoría Interna puntuables</td>
     </tr>` + detalleDashboardSGIHtml(fila, idFila);
   }
   const icono = fila.banda==='VERDE' ? '🟢' : fila.banda==='AMARILLA' ? '🟡' : '🔴';
-  return `<tr onclick="${toggle}" style="cursor:pointer">
-    <td>${nombreCelda}</td>
+  return `<tr onclick="${toggle}" style="cursor:pointer;${estiloSubfila}">
+    <td>${nombreHtml}</td>
     <td style="text-align:center">${fila.totalItems}</td>
     <td style="text-align:center">${fila.puntosObtenidos}</td>
     <td style="text-align:center">${fila.puntosMaximos}</td>
@@ -4768,22 +4772,51 @@ function filaDashboardSGIHtml(fila, idFila){
   </tr>` + detalleDashboardSGIHtml(fila, idFila);
 }
 
+// Normaliza el código de Pilar (tolera "p1", "P1", "Liderazgo", etc.)
+function normalizarPilar(v){
+  const t = String(v||'').trim().toUpperCase();
+  if(t === 'P1' || t.includes('LIDERAZGO')) return 'P1';
+  if(t === 'P2' || t.includes('PROCESO')) return 'P2';
+  return '';
+}
+function nombrePilar(codigo){
+  return codigo === 'P1' ? 'P1 — Liderazgo' : 'P2 — Procesos';
+}
+
+// Arma las 2 filas hijas (P1 Liderazgo / P2 Procesos) para un Sector,
+// filtrando los hallazgos de ESE sector según su columna Pilar.
+function filasPilarHtml(listaHallazgos, idBase){
+  const p1 = listaHallazgos.filter(h => normalizarPilar(h.pilar) === 'P1');
+  const p2 = listaHallazgos.filter(h => normalizarPilar(h.pilar) === 'P2');
+  const filaP1 = filaDashboardSGI(nombrePilar('P1'), p1);
+  const filaP2 = filaDashboardSGI(nombrePilar('P2'), p2);
+  return filaDashboardSGIHtml(filaP1, idBase+'-p1', true) + filaDashboardSGIHtml(filaP2, idBase+'-p2', true);
+}
+
 function renderDashboardSGI(){
   const cont = document.getElementById('hacc-dashboard-sgi');
   if(!cont) return;
   const { porSector, porDepto } = agruparParaDashboardSGI();
-  const filasSector = Object.keys(porSector).sort().map(s => filaDashboardSGI(etiquetaDeAgrupacion(s), porSector[s]));
-  const filasDepto = Object.keys(porDepto).sort().map(d => filaDashboardSGI(etiquetaDeAgrupacion(d), porDepto[d]));
+  const clavesSector = Object.keys(porSector).sort();
+  const clavesDepto = Object.keys(porDepto).sort();
   const encabezado = `<thead><tr>
     <th>Nombre</th><th>Ítems</th><th>Pts. obt.</th><th>Pts. máx.</th><th>% Cumpl.</th>
     <th>Banda</th><th>NC activas</th><th>OBS activas</th><th>OM activas</th><th>Última auditoría</th>
   </tr></thead>`;
 
+  const filasSectorHtml = clavesSector.map((s,i) => {
+    const lista = porSector[s];
+    const fila = filaDashboardSGI(etiquetaDeAgrupacion(s), lista);
+    return filaDashboardSGIHtml(fila, 'sec-'+i) + filasPilarHtml(lista, 'sec-'+i);
+  }).join('');
+
+  const filasDeptoHtml = clavesDepto.map((d,i) => filaDashboardSGIHtml(filaDashboardSGI(etiquetaDeAgrupacion(d), porDepto[d]), 'dep-'+i)).join('');
+
   cont.innerHTML = `
-    <div style="font-size:11px;font-weight:700;color:var(--text2);margin:2px 0 6px">Por Sector</div>
-    <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasSector.map((f,i)=>filaDashboardSGIHtml(f,'sec-'+i)).join('')}</tbody></table></div>
+    <div style="font-size:11px;font-weight:700;color:var(--text2);margin:2px 0 6px">Por Sector (con desglose P1-Liderazgo / P2-Procesos)</div>
+    <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasSectorHtml}</tbody></table></div>
     <div style="font-size:11px;font-weight:700;color:var(--text2);margin:16px 0 6px">Por Departamento</div>
-    <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasDepto.map((f,i)=>filaDashboardSGIHtml(f,'dep-'+i)).join('')}</tbody></table></div>
+    <div class="twrap"><table class="seg-tabla">${encabezado}<tbody>${filasDeptoHtml}</tbody></table></div>
   `;
 }
 
