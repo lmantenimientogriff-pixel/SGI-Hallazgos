@@ -4564,7 +4564,11 @@ function ordenarTipos(tipos){
 // Sector y Departamento se agrupan por clave normalizada (sin distinguir
 // mayúsculas/minúsculas) — ver claveAgrupacion() más arriba.
 function agruparHallazgosPorSegmento(){
-  const datos = (filtrados.length ? filtrados : rawData);
+  // Se excluyen del árbol los hallazgos con Tipo = "NA" exacto (no "No
+  // aplica" completo, que es otra cosa) — a pedido, para no perder de
+  // vista el resto de los datos "raros" que sí ayudan a detectar errores
+  // de carga.
+  const datos = (filtrados.length ? filtrados : rawData).filter(h => h.tipoHallazgo !== 'Na');
   const estructura = {};
 
   datos.forEach(h => {
