@@ -2498,6 +2498,8 @@ function renderPlan(data) {
     const tc = tipoColorPlan(r.tipoHallazgo);
     const codigoLimpio = codigoLimpioDe(r);
     const acciones = accionesDeHallazgo(codigoLimpio);
+    const codigo = String(r.codigoUnico||'').trim();
+    const causaRaiz = acciones.length ? acciones[0].causaRaiz : '';
 
     const accionesHtml = acciones.length ? acciones.map(a => {
       const ec = estadoColor(a.estAcc);
@@ -2508,6 +2510,7 @@ function renderPlan(data) {
         const cls = dias<0?'#E24B4A':dias<=7?'#EF9F27':'#1D9E75';
         vtoHtml = `<span style="color:${cls};font-weight:700">${dias>=0?'+'+dias+'d':dias+'d'}</span>`;
       }
+      const linksEvidencia = listaAdjuntosHtml(['HALL-EV-'+a.numeroAccion, a.numeroAccion]);
       return `<div class="plan-section" style="border-top:1px dashed var(--border);padding-top:8px;margin-top:8px">
         <div class="plan-label">Acción ${escHtml(a.numeroAccion)}</div>
         <div class="plan-text">${a.accionDesc||'Sin descripción'}</div>
@@ -2525,8 +2528,12 @@ function renderPlan(data) {
           </div>
         </div>
         ${a.obsVerif?`<div class="plan-text" style="margin-top:4px;font-size:11px;color:var(--text2)"><strong>Obs. Verificación:</strong> ${a.obsVerif}</div>`:''}
+        <div style="margin-top:4px"><span class="plan-footer-label">Evidencia de cierre</span>${linksEvidencia}</div>
       </div>`;
     }).join('') : `<div class="plan-section"><div class="plan-label">Acción Correctiva</div><div class="plan-text">Sin acción registrada</div></div>`;
+
+    const linksAuditoria = listaAdjuntosHtml(['HALL-AUD-'+codigo, codigo]);
+    const linksCausaRaiz = listaAdjuntosHtml(['HALL-CR-'+codigoLimpio, codigoLimpio]);
 
     return `<div class="plan-row" style="border-left:4px solid ${tc.bdr}">
       <div class="plan-header" style="background:${tc.hdr}">
@@ -2541,16 +2548,21 @@ function renderPlan(data) {
         <div class="plan-section">
           <div class="plan-label">Descripción</div>
           <div class="plan-text">${r.desc||'—'}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px"><strong>Responsable Directo:</strong> ${r.respDir||'—'} · <strong>Departamento:</strong> ${r.depto||'—'}</div>
         </div>
+        <div style="margin-bottom:4px"><span class="plan-footer-label">Informe de auditoría</span>${linksAuditoria}</div>
         ${r.correccion && r.correccion!=='—'?`
         <div class="plan-section">
           <div class="plan-label">Corrección</div>
           <div class="plan-text">${r.correccion}</div>
         </div>`:''}
+        ${causaRaiz?`
+        <div class="plan-section">
+          <div class="plan-label">Causa Raíz</div>
+          <div class="plan-text">${causaRaiz}</div>
+        </div>`:''}
+        <div style="margin-bottom:4px"><span class="plan-footer-label">Informe de causa raíz</span>${linksCausaRaiz}</div>
         ${accionesHtml}
-      </div>
-      <div class="plan-footer">
-        <div class="plan-footer-item"><span class="plan-footer-label">Responsable</span><span>${r.respDir||'—'}</span></div>
       </div>
     </div>`;
   }).join('');
@@ -2567,6 +2579,13 @@ function exportarPlanPDF() {
   const pen   = filtrados.filter(r=>estAccClasico(r)==='PENDIENTE').length;
   const venc  = filtrados.filter(hallazgoVencido).length;
 
+  // % de cierre sobre el TOTAL de acciones individuales (no por hallazgo) —
+  // junta todas las acciones de todos los hallazgos filtrados y calcula
+  // cuántas de ESAS están Finalizadas.
+  const todasLasAcciones = filtrados.flatMap(r => accionesDeHallazgo(codigoLimpioDe(r)));
+  const accCerradas = todasLasAcciones.filter(a => (a.estAcc||'').toUpperCase()==='FINALIZADO').length;
+  const pctCierreAcciones = todasLasAcciones.length ? Math.round(accCerradas/todasLasAcciones.length*100) : 0;
+
   // Ordenar NC → OBS → OM
   const dataSorted = [...filtrados].sort((a,b) => tipoOrder(a.tipoHallazgo) - tipoOrder(b.tipoHallazgo));
 
@@ -2574,6 +2593,8 @@ function exportarPlanPDF() {
     const tcPdf = tipoColorPlan(r.tipoHallazgo);
     const codigoLimpio = codigoLimpioDe(r);
     const acciones = accionesDeHallazgo(codigoLimpio);
+    const codigo = String(r.codigoUnico||'').trim();
+    const causaRaiz = acciones.length ? acciones[0].causaRaiz : '';
 
     const accionesHtml = acciones.length ? acciones.map(a => {
       const dias = diasR(a.fImpl);
@@ -2582,6 +2603,7 @@ function exportarPlanPDF() {
       if(abierto&&dias!==null) vtoTxt = dias>=0?'+'+dias+'d':dias+'d (VENCIDO)';
       const ec = estadoColor(a.estAcc);
       const vc = verifColor(a.estVerif);
+      const linksEvidencia = listaAdjuntosHtml(['HALL-EV-'+a.numeroAccion, a.numeroAccion]);
       return `<div class="field-block" style="border-top:1px dashed #ddd;padding-top:6px;margin-top:6px">
         <div class="field-label">Acción ${a.numeroAccion||''}</div>
         <div class="field-val">${a.accionDesc||'Sin descripción'}</div>
@@ -2599,8 +2621,12 @@ function exportarPlanPDF() {
           </div>
         </div>
         ${a.obsVerif?`<div class="field-val" style="margin-top:4px;font-size:10px;color:#555"><strong>Obs. Verificación:</strong> ${a.obsVerif}</div>`:''}
+        <div style="margin-top:4px"><span class="foot-lbl">Evidencia de cierre</span>${linksEvidencia}</div>
       </div>`;
     }).join('') : `<div class="field-block"><div class="field-label">Acción Correctiva</div><div class="field-val">Sin acción registrada</div></div>`;
+
+    const linksAuditoria = listaAdjuntosHtml(['HALL-AUD-'+codigo, codigo]);
+    const linksCausaRaiz = listaAdjuntosHtml(['HALL-CR-'+codigoLimpio, codigoLimpio]);
 
     return `
     <div class="row" style="border-left:4px solid ${tcPdf.bdr};page-break-inside:avoid">
@@ -2617,15 +2643,19 @@ function exportarPlanPDF() {
         <div class="field-block">
           <div class="field-label">Descripción del Hallazgo</div>
           <div class="field-val">${r.desc||'—'}</div>
+          <div style="font-size:10px;color:#555;margin-top:4px"><strong>Responsable Directo:</strong> ${r.respDir||'—'} · <strong>Departamento:</strong> ${r.depto||'—'}</div>
         </div>
+        <div style="margin-bottom:4px"><span class="foot-lbl">Informe de auditoría</span>${linksAuditoria}</div>
         ${r.correccion&&r.correccion!=='—'?`<div class="field-block">
           <div class="field-label">Corrección</div>
           <div class="field-val">${r.correccion}</div>
         </div>`:''}
+        ${causaRaiz?`<div class="field-block">
+          <div class="field-label">Causa Raíz</div>
+          <div class="field-val">${causaRaiz}</div>
+        </div>`:''}
+        <div style="margin-bottom:4px"><span class="foot-lbl">Informe de causa raíz</span>${linksCausaRaiz}</div>
         ${accionesHtml}
-      </div>
-      <div class="row-foot">
-        <div class="foot-item"><span class="foot-lbl">Responsable</span>${r.respDir||'—'}</div>
       </div>
     </div>`;
   }).join('');
@@ -2681,8 +2711,9 @@ function exportarPlanPDF() {
     <div class="kpi cur"><div class="val">${cur}</div><div class="lbl">En Curso</div></div>
     <div class="kpi pen"><div class="val">${pen}</div><div class="lbl">Pendientes</div></div>
     <div class="kpi vec"><div class="val">${venc}</div><div class="lbl">Vencidos</div></div>
-    <div class="kpi"><div class="val">${total>0?Math.round(fin/total*100):0}%</div><div class="lbl">Cierre</div></div>
+    <div class="kpi"><div class="val">${pctCierreAcciones}%</div><div class="lbl">% Cierre Acciones</div></div>
   </div>
+  <div style="font-size:9px;color:#999;text-align:right;margin-top:-6px;margin-bottom:12px">${accCerradas} de ${todasLasAcciones.length} acciones finalizadas</div>
   ${filas}
 </body>
 </html>`;
