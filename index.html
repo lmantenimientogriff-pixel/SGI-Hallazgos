@@ -4443,13 +4443,21 @@ async function cargarAccionesHallazgos(){
   }
 }
 
+// Saca cualquier cero adelante de la parte numérica de un código (ej:
+// "0271-1" -> "271-1"), sin importar de dónde vino el cero — mismo
+// problema de siempre (celda con formato numérico raro), esta vez
+// apareció en el respaldo por Serial Number en vez de en la migración.
+function limpiarCeroInicial(codigo){
+  return String(codigo||'').replace(/^0+(?=\d)/, '');
+}
+
 // Código limpio de UN hallazgo puntual, por POSICIÓN (rowId) — no depende
 // en absoluto de lo que haya en la columna "Código único" (puede estar
 // vacía, tener fórmula, o un número plano: da igual).
 function codigoLimpioDe(hallazgo){
   const porPosicion = listaCodigosHallazgos[hallazgo.rowId];
-  if(porPosicion) return porPosicion;
-  return String(hallazgo.serialNumber||'').trim() + '-1'; // respaldo si no hay Serial Number cargado
+  const crudo = porPosicion || (String(hallazgo.serialNumber||'').trim() + '-1'); // respaldo si no hay Serial Number cargado
+  return limpiarCeroInicial(crudo);
 }
 
 // Acciones de UN hallazgo puntual: la acción migrada original (código
