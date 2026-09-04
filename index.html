@@ -2495,21 +2495,45 @@ function renderPlan(data) {
   const sorted = [...data].sort((a,b) => tipoOrder(a.tipoHallazgo) - tipoOrder(b.tipoHallazgo));
 
   const rows = sorted.map((r,i) => {
-    const ec = estadoColor(r.estAcc);
-    const vc = verifColor(r.estVerif);
     const tc = tipoColorPlan(r.tipoHallazgo);
-    const dias = diasR(r.fImpl);
-    let vtoHtml = '—';
-    if(r.estAcc.trim()!=='FINALIZADO' && dias!==null){
-      const cls = dias<0?'#E24B4A':dias<=7?'#EF9F27':'#1D9E75';
-      vtoHtml = `<span style="color:${cls};font-weight:700">${dias>=0?'+'+dias+'d':dias+'d'}</span>`;
-    }
+    const codigoLimpio = codigoLimpioDe(r);
+    const acciones = accionesDeHallazgo(codigoLimpio);
+
+    const accionesHtml = acciones.length ? acciones.map(a => {
+      const ec = estadoColor(a.estAcc);
+      const vc = verifColor(a.estVerif);
+      const dias = diasR(a.fImpl);
+      let vtoHtml = '—';
+      if((a.estAcc||'').toUpperCase()!=='FINALIZADO' && dias!==null){
+        const cls = dias<0?'#E24B4A':dias<=7?'#EF9F27':'#1D9E75';
+        vtoHtml = `<span style="color:${cls};font-weight:700">${dias>=0?'+'+dias+'d':dias+'d'}</span>`;
+      }
+      return `<div class="plan-section" style="border-top:1px dashed var(--border);padding-top:8px;margin-top:8px">
+        <div class="plan-label">Acción ${escHtml(a.numeroAccion)}</div>
+        <div class="plan-text">${a.accionDesc||'Sin descripción'}</div>
+        <div class="plan-footer" style="margin-top:6px">
+          <div class="plan-footer-item"><span class="plan-footer-label">Resp. Acción</span><span>${a.respImpl||'—'}</span></div>
+          <div class="plan-footer-item"><span class="plan-footer-label">F. Impl.</span><span>${fmtDate(a.fImpl)||'—'}</span></div>
+          <div class="plan-footer-item"><span class="plan-footer-label">Vto.</span><span>${vtoHtml}</span></div>
+          <div class="plan-footer-item">
+            <span class="plan-footer-label">Estado Acción</span>
+            <span class="plan-badge" style="background:${ec.bg};color:${ec.fg}">${a.estAcc||'—'}</span>
+          </div>
+          <div class="plan-footer-item">
+            <span class="plan-footer-label">Verif. Eficacia</span>
+            <span class="plan-badge" style="background:${vc.bg};color:${vc.fg}">${a.estVerif||'Sin verificar'}</span>
+          </div>
+        </div>
+        ${a.obsVerif?`<div class="plan-text" style="margin-top:4px;font-size:11px;color:var(--text2)"><strong>Obs. Verificación:</strong> ${a.obsVerif}</div>`:''}
+      </div>`;
+    }).join('') : `<div class="plan-section"><div class="plan-label">Acción Correctiva</div><div class="plan-text">Sin acción registrada</div></div>`;
+
     return `<div class="plan-row" style="border-left:4px solid ${tc.bdr}">
       <div class="plan-header" style="background:${tc.hdr}">
         <div class="plan-num">${r.nHall||'—'}</div>
         <div class="plan-meta">${fmtDate(r.fechaAud)} · ${r.empresa||'—'} · ${r.unNegocio||'—'}</div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <span class="pill ${r.tipoHallazgo?.toLowerCase().includes('conformidad')?'p-nc':r.tipoHallazgo?.toLowerCase().includes('observ')?'p-obs':'p-om'}">${r.tipoHallazgo||'—'}</span>
+          <span class="pill ${r.tipoHallazgo?.toLowerCase().includes('conformidad')&&!r.tipoHallazgo?.toLowerCase().includes('no conform')?'p-om':r.tipoHallazgo?.toLowerCase().includes('no conform')?'p-nc':r.tipoHallazgo?.toLowerCase().includes('observ')?'p-obs':'p-om'}">${r.tipoHallazgo||'—'}</span>
           ${r.origen?`<span style="font-size:10px;font-weight:600;color:var(--text2)">${r.origen}</span>`:''}
         </div>
       </div>
@@ -2523,32 +2547,10 @@ function renderPlan(data) {
           <div class="plan-label">Corrección</div>
           <div class="plan-text">${r.correccion}</div>
         </div>`:''}
-        <div class="plan-section">
-          <div class="plan-label">Acción Correctiva</div>
-          <div class="plan-text">${r.accionDesc||'Sin acción registrada'}</div>
-        </div>
-
-        ${r.obsVerif?`
-        <div class="plan-section">
-          <div class="plan-label">Obs. Verificación</div>
-          <div class="plan-text">${r.obsVerif}</div>
-        </div>`:''}
+        ${accionesHtml}
       </div>
       <div class="plan-footer">
         <div class="plan-footer-item"><span class="plan-footer-label">Responsable</span><span>${r.respDir||'—'}</span></div>
-        <div class="plan-footer-item"><span class="plan-footer-label">Resp. Acción</span><span>${r.respAcc||'—'}</span></div>
-        <div class="plan-footer-item"><span class="plan-footer-label">Inf. Final</span><span>${r.estCierre||'—'}</span></div>
-        <div class="plan-footer-item"><span class="plan-footer-label">F. Impl.</span><span>${fmtDate(r.fImpl)||'—'}</span></div>
-        <div class="plan-footer-item"><span class="plan-footer-label">Vto.</span><span>${vtoHtml}</span></div>
-        <div class="plan-footer-item">
-          <span class="plan-footer-label">Estado Acción</span>
-          <span class="plan-badge" style="background:${ec.bg};color:${ec.fg}">${r.estAcc||'—'}</span>
-        </div>
-        <div class="plan-footer-item">
-          <span class="plan-footer-label">Verif. Eficacia</span>
-          <span class="plan-badge" style="background:${vc.bg};color:${vc.fg}">${r.estVerif||'Sin verificar'}</span>
-        </div>
-
       </div>
     </div>`;
   }).join('');
@@ -2560,22 +2562,46 @@ function exportarPlanPDF() {
   if(!filtrados.length){toast('Sin datos para exportar',2000);return;}
   const fecha = new Date().toLocaleDateString('es-AR');
   const total = filtrados.length;
-  const fin   = filtrados.filter(r=>r.estAcc.trim()==='FINALIZADO').length;
-  const cur   = filtrados.filter(r=>r.estAcc.trim()==='EN CURSO').length;
-  const pen   = filtrados.filter(r=>r.estAcc.trim()==='PENDIENTE').length;
-  const venc  = filtrados.filter(r=>{const d=diasR(r.fImpl);return r.estAcc.trim()!=='FINALIZADO'&&d!==null&&d<0;}).length;
+  const fin   = filtrados.filter(r=>estAccClasico(r)==='FINALIZADO').length;
+  const cur   = filtrados.filter(r=>estAccClasico(r)==='EN CURSO').length;
+  const pen   = filtrados.filter(r=>estAccClasico(r)==='PENDIENTE').length;
+  const venc  = filtrados.filter(hallazgoVencido).length;
 
   // Ordenar NC → OBS → OM
   const dataSorted = [...filtrados].sort((a,b) => tipoOrder(a.tipoHallazgo) - tipoOrder(b.tipoHallazgo));
 
   const filas = dataSorted.map(r=>{
-    const dias = diasR(r.fImpl);
-    const abierto = r.estAcc.trim()!=='FINALIZADO';
-    let vtoTxt = '—';
-    if(abierto&&dias!==null) vtoTxt = dias>=0?'+'+dias+'d':dias+'d (VENCIDO)';
-    const ec = estadoColor(r.estAcc);
-    const vc = verifColor(r.estVerif);
     const tcPdf = tipoColorPlan(r.tipoHallazgo);
+    const codigoLimpio = codigoLimpioDe(r);
+    const acciones = accionesDeHallazgo(codigoLimpio);
+
+    const accionesHtml = acciones.length ? acciones.map(a => {
+      const dias = diasR(a.fImpl);
+      const abierto = (a.estAcc||'').toUpperCase()!=='FINALIZADO';
+      let vtoTxt = '—';
+      if(abierto&&dias!==null) vtoTxt = dias>=0?'+'+dias+'d':dias+'d (VENCIDO)';
+      const ec = estadoColor(a.estAcc);
+      const vc = verifColor(a.estVerif);
+      return `<div class="field-block" style="border-top:1px dashed #ddd;padding-top:6px;margin-top:6px">
+        <div class="field-label">Acción ${a.numeroAccion||''}</div>
+        <div class="field-val">${a.accionDesc||'Sin descripción'}</div>
+        <div class="row-foot" style="background:none;border:none;padding:6px 0 0">
+          <div class="foot-item"><span class="foot-lbl">Resp. Acción</span>${a.respImpl||'—'}</div>
+          <div class="foot-item"><span class="foot-lbl">F. Impl.</span>${fmtDate(a.fImpl)||'—'}</div>
+          <div class="foot-item"><span class="foot-lbl">Vencimiento</span>${vtoTxt}</div>
+          <div class="foot-item">
+            <span class="foot-lbl">Estado Acción</span>
+            <span class="badge-est" style="background:${ec.bg};color:${ec.fg}">${a.estAcc||'—'}</span>
+          </div>
+          <div class="foot-item">
+            <span class="foot-lbl">Verif. Eficacia</span>
+            <span class="badge-est" style="background:${vc.bg};color:${vc.fg}">${a.estVerif||'Sin verificar'}</span>
+          </div>
+        </div>
+        ${a.obsVerif?`<div class="field-val" style="margin-top:4px;font-size:10px;color:#555"><strong>Obs. Verificación:</strong> ${a.obsVerif}</div>`:''}
+      </div>`;
+    }).join('') : `<div class="field-block"><div class="field-label">Acción Correctiva</div><div class="field-val">Sin acción registrada</div></div>`;
+
     return `
     <div class="row" style="border-left:4px solid ${tcPdf.bdr};page-break-inside:avoid">
       <div class="row-head" style="background:${tcPdf.hdr}">
@@ -2596,31 +2622,10 @@ function exportarPlanPDF() {
           <div class="field-label">Corrección</div>
           <div class="field-val">${r.correccion}</div>
         </div>`:''}
-        <div class="field-block">
-          <div class="field-label">Acción Correctiva</div>
-          <div class="field-val">${r.accionDesc||'Sin acción registrada'}</div>
-        </div>
-
-        ${r.obsVerif?`<div class="field-block">
-          <div class="field-label">Obs. Verificación Eficacia</div>
-          <div class="field-val">${r.obsVerif}</div>
-        </div>`:''}
+        ${accionesHtml}
       </div>
       <div class="row-foot">
         <div class="foot-item"><span class="foot-lbl">Responsable</span>${r.respDir||'—'}</div>
-        <div class="foot-item"><span class="foot-lbl">Resp. Acción</span>${r.respAcc||'—'}</div>
-        <div class="foot-item"><span class="foot-lbl">Inf. Final</span>${r.estCierre||'—'}</div>
-        <div class="foot-item"><span class="foot-lbl">F. Impl.</span>${fmtDate(r.fImpl)||'—'}</div>
-        <div class="foot-item"><span class="foot-lbl">Vencimiento</span>${vtoTxt}</div>
-        <div class="foot-item">
-          <span class="foot-lbl">Estado Acción</span>
-          <span class="badge-est" style="background:${ec.bg};color:${ec.fg}">${r.estAcc||'—'}</span>
-        </div>
-        <div class="foot-item">
-          <span class="foot-lbl">Verif. Eficacia</span>
-          <span class="badge-est" style="background:${vc.bg};color:${vc.fg}">${r.estVerif||'Sin verificar'}</span>
-        </div>
-
       </div>
     </div>`;
   }).join('');
@@ -4557,6 +4562,20 @@ function estadoResumenHallazgo(h){
 function estAccClasico(h){
   const resumen = estadoResumenHallazgo(h);
   return resumen === 'SIN ACCIÓN' ? 'PENDIENTE' : resumen;
+}
+
+// Un hallazgo está "vencido" si tiene al menos una acción no Finalizada
+// cuya Fecha de implementación ya pasó. Reemplaza al criterio viejo que
+// miraba una sola fecha (r.fImpl) — ahora puede haber varias acciones,
+// cada una con su propio plazo.
+function hallazgoVencido(h){
+  const codigoLimpio = codigoLimpioDe(h);
+  const acciones = accionesDeHallazgo(codigoLimpio);
+  return acciones.some(a => {
+    if((a.estAcc||'').toUpperCase() === 'FINALIZADO') return false;
+    const d = diasR(a.fImpl);
+    return d !== null && d < 0;
+  });
 }
 
 // "Cierre Proceso" (histórico) marcaba PENDIENTE hasta que se cargaba la
