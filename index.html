@@ -1505,9 +1505,12 @@ function renderTodo(){
   const cur=data.filter(r=>estAccClasico(r)==='EN CURSO').length;
   const pen=data.filter(r=>estAccClasico(r)==='PENDIENTE').length;
   const hoy=new Date();
-  // Separar OM del resto
+  // Separar OM y Conformidad del resto — solo cuentan para "Avance Acciones"
+  // los hallazgos que realmente necesitan una acción correctiva (NC, Obs,
+  // Integral). Conformidad no lleva acción (no hay nada que corregir), así
+  // que si se incluye, infla "Pendientes" artificialmente y hunde el %.
   const dataOM=data.filter(r=>r.tipoHallazgo==='Oportunidad de Mejora');
-  const dataSinOM=data.filter(r=>r.tipoHallazgo!=='Oportunidad de Mejora');
+  const dataSinOM=data.filter(r=>r.tipoHallazgo!=='Oportunidad de Mejora' && r.tipoHallazgo!=='Conformidad');
   // KPI 11 — Avance Acciones (excluye OM)
   const finAc=dataSinOM.filter(r=>estAccClasico(r)==='FINALIZADO').length;
   const enCurso=dataSinOM.filter(r=>estAccClasico(r)==='EN CURSO').length;
