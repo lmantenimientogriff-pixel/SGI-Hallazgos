@@ -4294,8 +4294,8 @@ function listaAdjuntosHtml(referencia){
   });
   if(!lista.length) return `<div style="font-size:10px;color:var(--text3)">Sin archivos cargados</div>`;
   return `<div style="display:flex;flex-direction:column;gap:3px">` + lista.map(a => `
-    <a href="${a.link}" target="_blank" rel="noopener" style="font-size:10px;color:var(--blue);text-decoration:none;display:flex;align-items:center;gap:4px">
-      <i class="ti ti-paperclip"></i> ${escHtml(a.nombreArchivo)}
+    <a href="${a.link}" target="_blank" rel="noopener" style="font-size:10px;color:#378ADD;text-decoration:underline;display:flex;align-items:center;gap:4px">
+      <i class="ti ti-paperclip"></i> ${escHtml(a.nombreArchivo)} <span style="font-style:italic;color:#6B7280;text-decoration:none">(clic para ver evidencia)</span>
     </a>`).join('') + `</div>`;
 }
 
