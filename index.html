@@ -495,7 +495,7 @@ tbody tr:hover td{background:var(--surface2)}
       <div class="fi"><label>Tipo hallazgo</label><div class="ms-wrapper" id="ms-tipo"></div></div>
       <div class="fi"><label>Origen</label><div class="ms-wrapper" id="ms-origen"></div></div>
       <div class="fi"><label>Estado corrección</label><div class="ms-wrapper" id="ms-estcorr"></div></div>
-      <div class="fi"><label>Estado acción</label><div class="ms-wrapper" id="ms-estacc"></div></div>
+      <div class="fi"><label>Estado acción correctiva</label><div class="ms-wrapper" id="ms-estacc"></div></div>
       <div class="fi"><label>Criticidad</label><div class="ms-wrapper" id="ms-crit"></div></div>
       <div class="fi"><label>Responsable directo</label><div class="ms-wrapper" id="ms-resp"></div></div>
       <div class="fi"><label>Resp. implementación corrección</label><div class="ms-wrapper" id="ms-respcorr"></div></div>
@@ -556,7 +556,7 @@ tbody tr:hover td{background:var(--surface2)}
     <div class="charts">
       <div class="chart-card"><div class="ct">1. Estado corrección (Col. U)</div><div style="position:relative;height:200px"><canvas id="c-estcorr" role="img" aria-label="Estado correcciones"></canvas></div></div>
       <div class="chart-card"><div class="ct">2. Informe Final de Hallazgo (Col. BL)</div><div style="position:relative;height:200px"><canvas id="c-estcierre" role="img" aria-label="Estado cierre hallazgo"></canvas></div></div>
-      <div class="chart-card"><div class="ct">3. Estado acción correctiva (Col. AC)</div><div style="position:relative;height:200px"><canvas id="c-estacc" role="img" aria-label="Estado acciones"></canvas></div></div>
+      <div class="chart-card"><div class="ct">3. Estado acción correctiva (hoja Acciones)</div><div style="position:relative;height:200px"><canvas id="c-estacc" role="img" aria-label="Estado acciones"></canvas></div></div>
       <div class="chart-card"><div class="ct">4. Verificación de eficacia</div><div style="position:relative;height:200px"><canvas id="c-estverif" role="img" aria-label="Verificación eficacia"></canvas></div></div>
       <div class="chart-card"><div class="ct">Hallazgos por departamento (top 8)</div><div style="position:relative;height:200px"><canvas id="c-depto" role="img" aria-label="Por departamento"></canvas></div></div>
       <div class="chart-card"><div class="ct">Tipo de hallazgo</div><div style="position:relative;height:200px"><canvas id="c-tipo" role="img" aria-label="Tipo hallazgo"></canvas></div></div>
@@ -1300,7 +1300,7 @@ document.addEventListener('click',e=>{
   }
 });
 
-const MS_PLACEHOLDERS={empresa:'Empresa',un:'Unidad negocio',depto:'Departamento',sector:'Sector',tipo:'Tipo',origen:'Origen',estcorr:'Estado correc.',estacc:'Estado acción',crit:'Criticidad',resp:'Resp. directo',venc:'Vencimiento',respcorr:'Resp. corrección',respacc:'Resp. acción correctiva',codigo:'Código único'};
+const MS_PLACEHOLDERS={empresa:'Empresa',un:'Unidad negocio',depto:'Departamento',sector:'Sector',tipo:'Tipo',origen:'Origen',estcorr:'Estado correc.',estacc:'Est. acción correctiva',crit:'Criticidad',resp:'Resp. directo',venc:'Vencimiento',respcorr:'Resp. corrección',respacc:'Resp. acción correctiva',codigo:'Código único'};
 let msOpts={};
 
 // ─── MULTI-SELECT ENGINE — SSOMA (estado propio, no interfiere con Hallazgos) ──
@@ -1387,7 +1387,7 @@ function poblarFiltros(data){
     if(r.tipoHallazgo)sets.tipo.add(r.tipoHallazgo);
     if(r.origen)sets.origen.add(r.origen);
     if(r.estCorr&&r.estCorr.trim())sets.estcorr.add(r.estCorr.trim());
-    if(r.estAcc&&r.estAcc.trim())sets.estacc.add(r.estAcc.trim());
+    if(estAccClasico(r))sets.estacc.add(estAccClasico(r));
     if(r.crit&&r.crit.trim())sets.crit.add(r.crit.trim());
     if(r.respDir)sets.resp.add(r.respDir);
     if(r.respCorr&&r.respCorr.trim())sets.respcorr.add(r.respCorr.trim());
@@ -1441,7 +1441,7 @@ function aplicarFiltros(){
     if(SEL.tipo.size>0&&!SEL.tipo.has(r.tipoHallazgo))return false;
     if(SEL.origen.size>0&&!SEL.origen.has(r.origen))return false;
     if(SEL.estcorr.size>0&&!SEL.estcorr.has(r.estCorr.trim()))return false;
-    if(SEL.estacc.size>0&&!SEL.estacc.has(r.estAcc.trim()))return false;
+    if(SEL.estacc.size>0&&!SEL.estacc.has(estAccClasico(r)))return false;
     if(SEL.crit.size>0&&!SEL.crit.has(r.crit.trim()))return false;
     if(SEL.resp.size>0&&!SEL.resp.has(r.respDir))return false;
     if(SEL.respcorr.size>0&&!SEL.respcorr.has(r.respCorr.trim()))return false;
@@ -1477,7 +1477,7 @@ function aplicarFiltros(){
 function renderActiveTags(){
   const container=document.getElementById('active-tags');
   const tags=[];
-  const labelMap={empresa:'Empresa',un:'UN',depto:'Depto',tipo:'Tipo',origen:'Origen',estcorr:'Est.Correc.',estacc:'Est.Acción',crit:'Crit.',resp:'Resp.Directo',venc:'Venc.',respcorr:'Resp.Correc.',respacc:'Resp.Acción',codigo:'Código'};
+  const labelMap={empresa:'Empresa',un:'UN',depto:'Depto',tipo:'Tipo',origen:'Origen',estcorr:'Est.Correc.',estacc:'Est.Acc.Correctiva',crit:'Crit.',resp:'Resp.Directo',venc:'Venc.',respcorr:'Resp.Correc.',respacc:'Resp.Acción',codigo:'Código'};
   Object.keys(SEL).forEach(key=>{
     if(SEL[key].size>0){
       const vals=[...SEL[key]].slice(0,2).join(', ')+(SEL[key].size>2?` +${SEL[key].size-2}`:'');
@@ -1510,7 +1510,7 @@ function renderTodo(){
   // Integral). Conformidad no lleva acción (no hay nada que corregir), así
   // que si se incluye, infla "Pendientes" artificialmente y hunde el %.
   const dataOM=data.filter(r=>r.tipoHallazgo==='Oportunidad de Mejora');
-  const dataSinOM=data.filter(r=>r.tipoHallazgo!=='Oportunidad de Mejora' && r.tipoHallazgo!=='Conformidad');
+  const dataSinOM=data.filter(r=>r.tipoHallazgo!=='Oportunidad de Mejora' && r.tipoHallazgo!=='Conformidad' && r.tipoHallazgo!=='Na');
   // KPI 11 — Avance Acciones (excluye OM)
   const finAc=dataSinOM.filter(r=>estAccClasico(r)==='FINALIZADO').length;
   const enCurso=dataSinOM.filter(r=>estAccClasico(r)==='EN CURSO').length;
@@ -1603,9 +1603,9 @@ function renderCharts(data){
   const tF=noZero(tC,['#E24B4A','#378ADD','#888780','#1D9E75','#EF9F27']);
   mc('c-tipo','doughnut',tF.labels,tF.vals,tF.colors);
 
-  // 3. Estado Acción Correctiva (Col AC)
+  // 3. Estado Acción Correctiva (hoja REGISTRO DE ACCIONES - HALLAZGOS, Col. I)
   const aC={};
-  data.forEach(r=>{const k=r.estAcc.trim()||'Sin estado';aC[k]=(aC[k]||0)+1;});
+  data.forEach(r=>{const k=estAccClasico(r)||'Sin estado';aC[k]=(aC[k]||0)+1;});
   const aKeys=Object.keys(aC).filter(k=>aC[k]>0);
   // Paleta extendida — colores distintos para cada valor
   const PALETTE=['#1D9E75','#EF9F27','#E24B4A','#378ADD','#534AB7','#888780','#E07B39','#2BBFB3','#C84B98','#6BAE45','#D4A017','#5B7FA6'];
